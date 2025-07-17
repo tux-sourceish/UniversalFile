@@ -1,0 +1,49 @@
+{
+  "entryPoints": ["./universalDocument.ts"],
+  "out": "./docs",
+  "name": "UniversalFile (.UD) Format",
+  "tsconfig": "./tsconfig.json",
+  "theme": "default",
+  "includeVersion": true,
+  "excludePrivate": true,
+  "excludeProtected": false,
+  "excludeInternal": false,
+  "readme": "./README.md",
+  "gitRevision": "main",
+  "gitRemote": "origin",
+  "hideGenerator": false,
+  "searchInComments": true,
+  "cleanOutputDir": true,
+  "plugin": ["typedoc-plugin-markdown"],
+  "categorizeByGroup": true,
+  "defaultCategory": "Core",
+  "categoryOrder": [
+    "Core",
+    "Types",
+    "Interfaces",
+    "Enums",
+    "Constants"
+  ],
+  "sort": ["source-order"],
+  "kindSortOrder": [
+    "Class",
+    "Constructor",
+    "Property",
+    "Method",
+    "Function",
+    "Interface",
+    "Type alias",
+    "Enum",
+    "Constant"
+  ],
+  "navigation": {
+    "includeCategories": true,
+    "includeGroups": true
+  },
+  "treatWarningsAsErrors": false,
+  "validation": {
+    "notExported": true,
+    "invalidLink": true,
+    "notDocumented": false
+  }
+}

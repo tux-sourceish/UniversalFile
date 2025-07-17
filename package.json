@@ -1,20 +1,45 @@
 {
   "name": "@tux-sourceish/universalfile",
-  "version": "1.0.0",
-  "description": "Revolutionary spatial document format with Bagua-based metadata",
-  "main": "index.js",
-  "types": "index.d.ts",
+  "version": "2.0.0",
+  "description": "Revolutionary spatial document format with Bagua-based metadata and hyperdimensional vector support",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "test": "echo \"No tests yet\"",
-    "example": "node examples/basic.js"
+    "dev": "tsc --watch",
+    "test": "jest",
+    "example": "node examples/basic.js",
+    "docs": "typedoc"
   },
-  "keywords": ["spatial-computing", "bagua", "vector-database", "minimap", "universalfile"],
+  "keywords": [
+    "spatial-computing",
+    "bagua",
+    "vector-database",
+    "minimap",
+    "universalfile",
+    "hyperdimensional",
+    "ai-enhanced",
+    "binary-format"
+  ],
   "author": "tux-sourceish <florian.schneider@ullrichbau.de>",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/tux-sourceish/UniversalFile.git"
   },
-  "homepage": "https://github.com/tux-sourceish/UniversalFile#readme"
+  "homepage": "https://github.com/tux-sourceish/UniversalFile#readme",
+  "bugs": {
+    "url": "https://github.com/tux-sourceish/UniversalFile/issues"
+  },
+  "devDependencies": {
+    "@types/node": "^18.19.119",
+    "jest": "^29.0.0",
+    "typedoc": "^0.24.0",
+    "typescript": "^5.8.3"
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ]
 }
