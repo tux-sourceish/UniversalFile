@@ -1,0 +1,20 @@
+{
+  "name": "@tux-sourceish/universalfile",
+  "version": "1.0.0",
+  "description": "Revolutionary spatial document format with Bagua-based metadata",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "echo \"No tests yet\"",
+    "example": "node examples/basic.js"
+  },
+  "keywords": ["spatial-computing", "bagua", "vector-database", "minimap", "universalfile"],
+  "author": "tux-sourceish <florian.schneider@ullrichbau.de>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tux-sourceish/UniversalFile.git"
+  },
+  "homepage": "https://github.com/tux-sourceish/UniversalFile#readme"
+}
