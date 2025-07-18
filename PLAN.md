@@ -90,13 +90,13 @@ interface UDPosition {
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ HEADER                                                      │
-│ UD_MAGIC (4) | VERSION (2) | METADATA_OFFSET (4) | ...    │
+│ UD_MAGIC (4) | VERSION (2) | METADATA_OFFSET (4) | ...      │
 ├─────────────────────────────────────────────────────────────┤
 │ METADATA_BLOCK                                              │
-│ JSON-encoded metadata with TUI presets                     │
+│ JSON-encoded metadata with TUI presets                      │
 ├─────────────────────────────────────────────────────────────┤
 │ ITEMS_BLOCK                                                 │
-│ ITEM_HEADER | BAGUA (2) | ORIGIN | TRANSFORMS | CONTENT    │
+│ ITEM_HEADER | BAGUA (2) | ORIGIN | TRANSFORMS | CONTENT     │
 │ ...                                                         │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -195,7 +195,7 @@ UniversalFile/
 
 ## 🚀 Next Sprint Planning
 
-### Immediate (Next 30 minutes)
+### Immediate
 1. **✅ Complete ZUKUNFTSMUSIK.md**
 2. **✅ Fix test suite TypeScript issues**
 3. **✅ Run complete validation**
