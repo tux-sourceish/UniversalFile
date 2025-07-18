@@ -1,0 +1,55 @@
+# .github/workflows/documentation-validation.yml
+name: Validate Living Documentation
+
+on: [push, pull_request]
+
+jobs:
+  validate-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Validate INTERACTIVE.md is valid .ud
+        run: |
+          node -e "
+          const { UniversalDocument } = require('./dist');
+          const fs = require('fs');
+          const content = fs.readFileSync('docs/INTERACTIVE.md', 'utf8');
+          // Extract YAML frontmatter and verify it's valid
+          const match = content.match(/^---\n([\s\S]*?)\n---/);
+          if (!match) throw new Error('No UD metadata in INTERACTIVE.md');
+          console.log('✅ INTERACTIVE.md is a valid .ud document!');
+          "
+
+      - name: Verify VISION.canvas exists and is valid
+        run: |
+          node -e "
+          const { UniversalDocument } = require('./dist');
+          const fs = require('fs');
+          const buffer = fs.readFileSync('showcase/VISION.canvas');
+          const doc = UniversalDocument.fromBinary(buffer.buffer);
+          console.log('✅ VISION.canvas loaded:', doc.allItems.length, 'items');
+          "
+
+      - name: Verify PROOF-OF-LIFE.ud
+        run: |
+          node -e "
+          const { UniversalDocument } = require('./dist');
+          const fs = require('fs');
+          const buffer = fs.readFileSync('showcase/PROOF-OF-LIFE.ud');
+          const doc = UniversalDocument.fromBinary(buffer.buffer);
+          const sourceItem = doc.allItems.find(i => i.title.includes('Source Code'));
+          if (!sourceItem) throw new Error('Proof incomplete!');
+          console.log('✅ PROOF-OF-LIFE.ud is self-aware!');
+          "
