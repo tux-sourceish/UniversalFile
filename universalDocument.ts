@@ -292,13 +292,16 @@ export class UniversalDocument {
     CHART: 6,         // Data visualizations
     CALENDAR: 7,      // Time-based data
     AI_GENERATED: 8,  // AI-created content
-    DATABASE: 9       // Hyperdimensional vector databases
+    DATABASE: 9,      // Hyperdimensional vector databases
+    SYSTEM: 10        // System-level items
   } as const;
 
   /** Internal storage for document items */
   private items: Map<UDID, UDItem> = new Map();
   /** Document metadata */
   public metadata: UDMetadata;
+  /** Counter for unique ID generation */
+  private static idCounter = 0;
 
   // ====================================================================
   // KONSTRUKTOR & INITIALISIERUNG
@@ -366,11 +369,11 @@ export class UniversalDocument {
    * ```
    */
   public createItem(options: Omit<UDItem, 'id' | 'created_at' | 'updated_at' | 'transformation_history' | 'bagua_descriptor'> & { bagua_descriptor?: number }, origin: UDOrigin): UDItem {
-    const id = `ud_item_${Date.now()}`;
+    const id = `ud_item_${Date.now()}_${++UniversalDocument.idCounter}`;
     const now = Date.now();
 
     const creation_transform: UDTransformation = {
-      id: `ud_trans_${now}`,
+      id: `ud_trans_${now}_${UniversalDocument.idCounter}`,
       timestamp: now,
       verb: 'erschaffen',
       agent: origin.tool,
@@ -512,12 +515,40 @@ export class UniversalDocument {
    * ```
    */
   public toBinary(): ArrayBuffer {
-    // HEADER: UD_MAGIC (4) | VERSION (2) | METADATA_OFFSET (4) | ITEMS_OFFSET (4) | ...
-    // METADATA_BLOCK: JSON-String der Metadaten (inkl. TUI-Presets)
-    // ITEMS_BLOCK:
-    //   ITEM_1: ITEM_HEADER | BAGUA (2) | ORIGIN_DATA | TRANSFORMATION_COUNT (2) | TRANSFORMATION_1 | ... | CONTENT
-    console.warn("Binary-Export ist noch nicht für die Kira-Struktur implementiert.");
-    return new ArrayBuffer(0);
+    // Serialize metadata and items to JSON first
+    const metadataJson = JSON.stringify(this.metadata);
+    const itemsJson = JSON.stringify(Array.from(this.items.values()));
+    
+    // Calculate offsets
+    const headerSize = 16; // UD_MAGIC (4) + VERSION (2) + METADATA_OFFSET (4) + ITEMS_OFFSET (4) + padding (2)
+    const metadataOffset = headerSize;
+    const itemsOffset = metadataOffset + metadataJson.length * 2; // UTF-16 encoding
+    const totalSize = itemsOffset + itemsJson.length * 2;
+    
+    // Create buffer
+    const buffer = new ArrayBuffer(totalSize);
+    const view = new DataView(buffer);
+    
+    // Write header
+    view.setUint32(0, UniversalDocument.UD_MAGIC, true); // Little endian
+    view.setUint16(4, 0x0207, true); // Version 2.7
+    view.setUint32(6, metadataOffset, true);
+    view.setUint32(10, itemsOffset, true);
+    view.setUint16(14, 0x0000, true); // Padding
+    
+    // Write metadata as UTF-16
+    const metadataArray = new Uint16Array(buffer, metadataOffset, metadataJson.length);
+    for (let i = 0; i < metadataJson.length; i++) {
+      metadataArray[i] = metadataJson.charCodeAt(i);
+    }
+    
+    // Write items as UTF-16
+    const itemsArray = new Uint16Array(buffer, itemsOffset, itemsJson.length);
+    for (let i = 0; i < itemsJson.length; i++) {
+      itemsArray[i] = itemsJson.charCodeAt(i);
+    }
+    
+    return buffer;
   }
   
   /**
@@ -534,9 +565,458 @@ export class UniversalDocument {
    * ```
    */
   public static fromBinary(buffer: ArrayBuffer): UniversalDocument {
-    // Implementierung zum Parsen der oben genannten Struktur
-    console.warn("Binary-Import ist noch nicht für die Kira-Struktur implementiert.");
-    return new UniversalDocument();
+    const view = new DataView(buffer);
+    
+    // Read header
+    const magic = view.getUint32(0, true);
+    if (magic !== UniversalDocument.UD_MAGIC) {
+      throw new Error('Invalid UniversalDocument magic number');
+    }
+    
+    const version = view.getUint16(4, true);
+    const metadataOffset = view.getUint32(6, true);
+    const itemsOffset = view.getUint32(10, true);
+    
+    // Read metadata
+    const metadataLength = (itemsOffset - metadataOffset) / 2;
+    const metadataArray = new Uint16Array(buffer, metadataOffset, metadataLength);
+    let metadataJson = '';
+    for (let i = 0; i < metadataLength; i++) {
+      metadataJson += String.fromCharCode(metadataArray[i]);
+    }
+    
+    // Read items
+    const itemsLength = (buffer.byteLength - itemsOffset) / 2;
+    const itemsArray = new Uint16Array(buffer, itemsOffset, itemsLength);
+    let itemsJson = '';
+    for (let i = 0; i < itemsLength; i++) {
+      itemsJson += String.fromCharCode(itemsArray[i]);
+    }
+    
+    // Create document
+    const doc = new UniversalDocument();
+    doc.metadata = JSON.parse(metadataJson);
+    
+    // Restore items
+    const items: UDItem[] = JSON.parse(itemsJson);
+    doc.items.clear();
+    for (const item of items) {
+      doc.items.set(item.id, item);
+    }
+    
+    return doc;
+  }
+
+  /**
+   * Query items by Bagua flags
+   * 
+   * @param flags - Object with Bagua flags to match
+   * @returns Array of items matching the Bagua criteria
+   * 
+   * @example
+   * ```typescript
+   * const windItems = doc.queryByBagua({ XUN: true });
+   * const taijiItems = doc.queryByBagua({ TAIJI: true });
+   * ```
+   */
+  public queryByBagua(flags: Partial<Record<keyof typeof UniversalDocument.BAGUA, boolean>>): UDItem[] {
+    const result: UDItem[] = [];
+    const flagMask = Object.entries(flags).reduce((mask, [key, value]) => {
+      if (value && key in UniversalDocument.BAGUA) {
+        return mask | UniversalDocument.BAGUA[key as keyof typeof UniversalDocument.BAGUA];
+      }
+      return mask;
+    }, 0);
+
+    for (const item of this.items.values()) {
+      if ((item.bagua_descriptor & flagMask) === flagMask) {
+        result.push(item);
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Add an item to the document (compatibility method)
+   * 
+   * @param options - Item configuration
+   * @returns The created UDItem
+   * 
+   * @example
+   * ```typescript
+   * const item = doc.addItem({
+   *   type: UniversalDocument.ItemType.NOTIZZETTEL,
+   *   position: { x: 0, y: 0, z: 0 },
+   *   content: { text: "Hello World" }
+   * });
+   * ```
+   */
+  public addItem(options: Omit<UDItem, 'id' | 'created_at' | 'updated_at' | 'transformation_history' | 'origin' | 'bagua_descriptor'> & { bagua_descriptor?: number }): UDItem {
+    const defaultOrigin: UDOrigin = {
+      host: "localhost",
+      path: "/workspace",
+      tool: "UniversalDocument"
+    };
+    
+    return this.createItem(options, defaultOrigin);
+  }
+
+  /**
+   * KIRA's PROPOSAL: Text serialization for human collaboration
+   * Serializes document to interactive markdown format with YAML frontmatter
+   * 
+   * @returns String containing markdown with UD metadata
+   * 
+   * @example
+   * ```typescript
+   * const markdown = doc.toText();
+   * fs.writeFileSync('document.ud.md', markdown);
+   * ```
+   */
+  public toText(): string {
+    const lines: string[] = [];
+    
+    // Document frontmatter
+    lines.push('---');
+    lines.push(`ud-format: ${this.metadata.format_version}`);
+    lines.push(`ud-creator: ${this.metadata.creator}`);
+    lines.push(`ud-created: ${this.metadata.created_at}`);
+    lines.push(`ud-items: ${this.metadata.item_count}`);
+    lines.push(`ud-canvas: ${this.metadata.canvas_bounds.x},${this.metadata.canvas_bounds.y},${this.metadata.canvas_bounds.width},${this.metadata.canvas_bounds.height}`);
+    lines.push('---');
+    lines.push('');
+    
+    // Document title
+    lines.push(`# 🌌 UniversalDocument`);
+    lines.push('');
+    lines.push(`*Generated from ${this.metadata.creator} at ${this.metadata.created_at}*`);
+    lines.push('');
+    
+    // Items sections
+    for (const item of this.items.values()) {
+      lines.push('---');
+      lines.push(`ud-id: ${item.id}`);
+      lines.push(`ud-type: ${Object.keys(UniversalDocument.ItemType)[item.type]}`);
+      lines.push(`ud-position: ${item.position.x},${item.position.y},${item.position.z}`);
+      lines.push(`ud-dimensions: ${item.dimensions.width}x${item.dimensions.height}`);
+      lines.push(`ud-bagua: ${this.baguaToString(item.bagua_descriptor)}`);
+      lines.push(`ud-contextual: ${item.is_contextual}`);
+      if (item.origin) {
+        lines.push(`ud-origin: ${item.origin.host}:${item.origin.path} (${item.origin.tool})`);
+      }
+      lines.push(`ud-created: ${new Date(item.created_at).toISOString()}`);
+      lines.push(`ud-updated: ${new Date(item.updated_at).toISOString()}`);
+      lines.push('---');
+      lines.push('');
+      
+      // Item title and content
+      lines.push(`## ${item.title || 'Untitled Item'}`);
+      lines.push('');
+      
+      // Render content based on type
+      lines.push(this.renderItemContent(item));
+      lines.push('');
+      
+      // Transformation history
+      if (item.transformation_history.length > 0) {
+        lines.push('### 🔄 Transformation History');
+        lines.push('');
+        for (const transform of item.transformation_history) {
+          lines.push(`- **${transform.verb}** by \`${transform.agent}\` at ${new Date(transform.timestamp).toISOString()}`);
+          lines.push(`  > ${transform.description}`);
+        }
+        lines.push('');
+      }
+    }
+    
+    return lines.join('\n');
+  }
+
+  /**
+   * KIRA's PROPOSAL: Load from interactive markdown format
+   * Deserializes document from markdown with YAML frontmatter
+   * 
+   * @param text - Markdown text with UD metadata
+   * @returns New UniversalDocument instance
+   */
+  public static fromText(text: string): UniversalDocument {
+    const doc = new UniversalDocument();
+    
+    // Split by --- to get sections
+    const sections = text.split('---');
+    
+    // Parse document frontmatter (first section)
+    if (sections.length > 0) {
+      const docMeta = sections[0];
+      const metaLines = docMeta.split('\n').filter(l => l.includes(':'));
+      
+      for (const line of metaLines) {
+        const [key, value] = line.split(':').map(s => s.trim());
+        if (key === 'ud-creator') doc.metadata.creator = value;
+        if (key === 'ud-created') doc.metadata.created_at = value;
+        if (key === 'ud-format') doc.metadata.format_version = value;
+        if (key === 'ud-canvas') {
+          const coords = value.split(',').map(Number);
+          if (coords.length === 4) {
+            doc.metadata.canvas_bounds = {
+              x: coords[0], y: coords[1], 
+              width: coords[2], height: coords[3]
+            };
+          }
+        }
+      }
+    }
+    
+    // Parse items from remaining sections (skip document content section)
+    // Structure: [0: doc-frontmatter, 1: empty, 2: doc-content, 3: item1-meta, 4: item1-content, 5: item2-meta, 6: item2-content, ...]
+    for (let i = 3; i < sections.length; i += 2) {
+      const itemMeta = sections[i];
+      const itemContent = sections[i + 1] || '';
+      
+      // Only process if we have metadata section
+      if (itemMeta && itemMeta.trim() && itemMeta.includes('ud-id:')) {
+        const item = doc.parseItemFromText(itemMeta, itemContent);
+        if (item) {
+          doc.items.set(item.id, item);
+        }
+      }
+    }
+    
+    doc.metadata.item_count = doc.items.size;
+    return doc;
+  }
+
+  private baguaToString(descriptor: number): string {
+    const flags: string[] = [];
+    if (descriptor & UniversalDocument.BAGUA.QIAN) flags.push('QIAN');
+    if (descriptor & UniversalDocument.BAGUA.DUI) flags.push('DUI');
+    if (descriptor & UniversalDocument.BAGUA.KUN) flags.push('KUN');
+    if (descriptor & UniversalDocument.BAGUA.LI) flags.push('LI');
+    if (descriptor & UniversalDocument.BAGUA.XUN) flags.push('XUN');
+    if (descriptor & UniversalDocument.BAGUA.ZHEN) flags.push('ZHEN');
+    if (descriptor & UniversalDocument.BAGUA.GEN) flags.push('GEN');
+    if (descriptor & UniversalDocument.BAGUA.KAN) flags.push('KAN');
+    if (descriptor & UniversalDocument.BAGUA.TAIJI) flags.push('TAIJI');
+    return flags.join('|');
+  }
+
+  private renderItemContent(item: UDItem): string {
+    switch (item.type) {
+      case UniversalDocument.ItemType.NOTIZZETTEL:
+        return typeof item.content === 'string' ? item.content : 
+               item.content.text || JSON.stringify(item.content);
+      
+      case UniversalDocument.ItemType.TABELLE:
+        if (item.content.headers && item.content.rows) {
+          let table = '| ' + item.content.headers.join(' | ') + ' |\n';
+          table += '| ' + item.content.headers.map(() => '---').join(' | ') + ' |\n';
+          for (const row of item.content.rows) {
+            table += '| ' + row.join(' | ') + ' |\n';
+          }
+          return table;
+        }
+        return JSON.stringify(item.content);
+      
+      case UniversalDocument.ItemType.CODE:
+        return '```\n' + (item.content.code || JSON.stringify(item.content)) + '\n```';
+      
+      default:
+        return '```json\n' + JSON.stringify(item.content, null, 2) + '\n```';
+    }
+  }
+
+  private parseItemFromText(meta: string, content: string): UDItem | null {
+    try {
+      // Parse item metadata
+      const metaLines = meta.split('\n').filter(l => l.includes(':'));
+      const itemData: any = {};
+      
+      for (const line of metaLines) {
+        const [key, value] = line.split(':').map(s => s.trim());
+        switch (key) {
+          case 'ud-id':
+            itemData.id = value;
+            break;
+          case 'ud-type':
+            itemData.type = (UniversalDocument.ItemType as any)[value];
+            break;
+          case 'ud-position':
+            const pos = value.split(',').map(Number);
+            itemData.position = { x: pos[0], y: pos[1], z: pos[2] };
+            break;
+          case 'ud-dimensions':
+            const dims = value.split('x').map(Number);
+            itemData.dimensions = { width: dims[0], height: dims[1] };
+            break;
+          case 'ud-bagua':
+            itemData.bagua_descriptor = UniversalDocument.parseBaguaFromString(value);
+            break;
+          case 'ud-contextual':
+            itemData.is_contextual = value === 'true';
+            break;
+          case 'ud-origin':
+            itemData.origin = UniversalDocument.parseOriginFromString(value);
+            break;
+          case 'ud-created':
+            itemData.created_at = new Date(value).getTime();
+            break;
+          case 'ud-updated':
+            itemData.updated_at = new Date(value).getTime();
+            break;
+        }
+      }
+      
+      // Parse content section
+      const contentLines = content.split('\n');
+      let title = '';
+      let itemContent: any = '';
+      let transformations: UDTransformation[] = [];
+      
+      let i = 0;
+      // Find title (first ## header)
+      while (i < contentLines.length) {
+        const line = contentLines[i].trim();
+        if (line.startsWith('## ')) {
+          title = line.substring(3).trim();
+          i++;
+          break;
+        }
+        i++;
+      }
+      
+      // Parse content until transformation history
+      const contentStart = i;
+      while (i < contentLines.length) {
+        const line = contentLines[i].trim();
+        if (line.startsWith('### 🔄 Transformation History')) {
+          break;
+        }
+        i++;
+      }
+      
+      // Extract content
+      const contentSection = contentLines.slice(contentStart, i).join('\n').trim();
+      itemContent = this.parseContentByType(itemData.type, contentSection);
+      
+      // Parse transformation history
+      if (i < contentLines.length) {
+        i++; // Skip history header
+        while (i < contentLines.length) {
+          const line = contentLines[i].trim();
+          if (line.startsWith('- **')) {
+            const transform = this.parseTransformationFromLine(line, contentLines[i + 1]);
+            if (transform) {
+              transformations.push(transform);
+            }
+            i += 2; // Skip description line
+          } else {
+            i++;
+          }
+        }
+      }
+      
+      // Create UDItem
+      const item: UDItem = {
+        id: itemData.id,
+        type: itemData.type,
+        title: title,
+        position: itemData.position,
+        dimensions: itemData.dimensions,
+        bagua_descriptor: itemData.bagua_descriptor,
+        content: itemContent,
+        is_contextual: itemData.is_contextual,
+        origin: itemData.origin,
+        transformation_history: transformations,
+        created_at: itemData.created_at,
+        updated_at: itemData.updated_at
+      };
+      
+      return item;
+    } catch (error) {
+      console.error('Failed to parse item from text:', error);
+      return null;
+    }
+  }
+
+  private static parseBaguaFromString(value: string): number {
+    let descriptor = 0;
+    const flags = value.split('|');
+    for (const flag of flags) {
+      if (flag in UniversalDocument.BAGUA) {
+        descriptor |= (UniversalDocument.BAGUA as any)[flag];
+      }
+    }
+    return descriptor;
+  }
+
+  private static parseOriginFromString(value: string): UDOrigin {
+    // Format: "host:path (tool)"
+    const match = value.match(/^([^:]+):([^(]+)\s*\(([^)]+)\)$/);
+    if (match) {
+      return {
+        host: match[1].trim(),
+        path: match[2].trim(),
+        tool: match[3].trim()
+      };
+    }
+    return { host: 'unknown', path: '/', tool: 'unknown' };
+  }
+
+  private parseContentByType(type: number, content: string): any {
+    switch (type) {
+      case UniversalDocument.ItemType.NOTIZZETTEL:
+        return { text: content };
+      
+      case UniversalDocument.ItemType.TABELLE:
+        return this.parseTableFromMarkdown(content);
+      
+      case UniversalDocument.ItemType.CODE:
+        // Remove code fences
+        const codeMatch = content.match(/```[\s\S]*?\n([\s\S]*?)\n```/);
+        return { code: codeMatch ? codeMatch[1] : content };
+      
+      default:
+        // Try to parse as JSON, fallback to text
+        try {
+          const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/);
+          if (jsonMatch) {
+            return JSON.parse(jsonMatch[1]);
+          }
+        } catch (e) {
+          // Fallback to text
+        }
+        return { text: content };
+    }
+  }
+
+  private parseTableFromMarkdown(content: string): any {
+    const lines = content.split('\n').filter(l => l.trim().startsWith('|'));
+    if (lines.length < 2) return { text: content };
+    
+    const headers = lines[0].split('|').map(h => h.trim()).filter(h => h);
+    const rows = lines.slice(2).map(line => 
+      line.split('|').map(cell => cell.trim()).filter(cell => cell)
+    );
+    
+    return { headers, rows };
+  }
+
+  private parseTransformationFromLine(line: string, descLine: string): UDTransformation | null {
+    // Format: - **verb** by `agent` at timestamp
+    const match = line.match(/- \*\*([^*]+)\*\* by `([^`]+)` at (.+)$/);
+    if (!match) {
+      return null;
+    }
+    
+    const description = descLine ? descLine.trim().replace(/^>\s*/, '') : '';
+    
+    return {
+      id: `parsed_${Date.now()}_${Math.random()}`,
+      verb: match[1],
+      agent: match[2],
+      timestamp: new Date(match[3]).getTime(),
+      description
+    };
   }
 
   /**
