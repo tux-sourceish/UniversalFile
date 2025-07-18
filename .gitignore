@@ -39,3 +39,14 @@ __pycache__/
 # OS-generated files
 .DS_Store
 Thumbs.db
+.directory
+
+# Development artifacts
+*.txt
+*.swp
+*-test.html
+debug-*.html
+simple-*.html
+
+# Archive
+/archive/
