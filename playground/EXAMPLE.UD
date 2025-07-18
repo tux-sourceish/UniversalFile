@@ -1,0 +1,35 @@
+---ud-document
+([{
+  version: 2.0
+  creator: UniversalFile Test Suite
+  created_at: 2024-01-09T12:00:00Z
+  canvas_bounds: {x: 0, y: 0, width: 4096, height: 4096}
+}])
+---ud-document-end
+
+([{ITEM
+  id: 550e8400-e29b-41d4-a716-446655440000
+  type: NOTIZZETTEL
+  title: My Spatial Note
+  position: {x: 100, y: 200, z: 0}
+  dimensions: {width: 200, height: 100}
+  bagua: ☷☴ (48)
+  is_contextual: false
+  created_at: 2024-01-09T12:00:00Z
+  updated_at: 2024-01-09T12:00:00Z
+  ([{ORIGIN
+    host: localhost
+    path: /desktop
+    tool: UniversalDesktop
+  }])
+  ([{HISTORY
+    - verb: created
+      agent: user:tux
+      timestamp: 2024-01-09T12:00:00Z
+      description: Initial creation
+  }])
+}])
+([{CONTENT
+This is my first spatial note!
+It exists in 3D space.
+}])

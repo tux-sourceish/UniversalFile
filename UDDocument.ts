@@ -362,7 +362,6 @@ export class UDDocument {
       header: this.header,
       metadata: this.metadata,
       items: Array.from(this.items.entries()).map(([id, item]) => ({
-        id,
         ...item,
         baguaDescription: BaguaUtils.describeDescriptor(item.bagua),
         baguaMatrix: BaguaUtils.renderMatrix(item.bagua),
