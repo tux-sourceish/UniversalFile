@@ -1,25 +1,25 @@
 ---
-ud-format: 2.7.0-kira
-ud-creator: UniversalDesktop von SingularUniverse
-ud-created: 2025-07-18T04:18:41.923Z
+ud-format: 2.1.0
+ud-creator: UniversalFile with Raimund's Bagua
+ud-created: 2025-07-19T02:01:08.087Z
 ud-items: 2
-ud-canvas: -16000,-16000,32000,32000
+ud-canvas: 0,0,4096,4096
 ---
 
 # 🌌 UniversalDocument
 
-*Generated from UniversalDesktop von SingularUniverse at 2025-07-18T04:18:41.923Z*
+*Generated from UniversalFile with Raimund's Bagua at 2025-07-19T02:01:08.087Z*
 
 ---
-ud-id: ud_item_1752812321923_1007
-ud-type: NOTIZZETTEL
+ud-id: ud_item_1752890468087_1009
+ud-type: VARIABLE
 ud-position: 50,100,0
 ud-dimensions: 250x150
-ud-bagua: KUN|LI
+ud-bagua: ERDE|WIND
 ud-contextual: false
 ud-origin: test.localhost:/debug/roundtrip (Round-Trip Test)
-ud-created: 2025-07-18T04:18:41.923Z
-ud-updated: 2025-07-18T04:18:41.923Z
+ud-created: 2025-07-19T02:01:08.096Z
+ud-updated: 2025-07-19T02:01:08.096Z
 ---
 
 ## Round-Trip Note
@@ -28,19 +28,19 @@ This note will survive the round-trip! 🚀
 
 ### 🔄 Transformation History
 
-- **erschaffen** by `Round-Trip Test` at 2025-07-18T04:18:41.923Z
-  > Element vom Typ 'NOTIZZETTEL' erstellt.
+- **erschaffen** by `Round-Trip Test` at 2025-07-19T02:01:08.096Z
+  > Element vom Typ 'VARIABLE' erstellt.
 
 ---
-ud-id: ud_item_1752812321923_1008
+ud-id: ud_item_1752890468087_1010
 ud-type: TABELLE
 ud-position: 300,100,1
 ud-dimensions: 350x250
-ud-bagua: DUI|KUN
+ud-bagua: SEE|BERG
 ud-contextual: true
 ud-origin: test.localhost:/debug/roundtrip (Round-Trip Test)
-ud-created: 2025-07-18T04:18:41.923Z
-ud-updated: 2025-07-18T04:18:41.923Z
+ud-created: 2025-07-19T02:01:08.097Z
+ud-updated: 2025-07-19T02:01:08.098Z
 ---
 
 ## Round-Trip Table
@@ -54,7 +54,7 @@ ud-updated: 2025-07-18T04:18:41.923Z
 
 ### 🔄 Transformation History
 
-- **erschaffen** by `Round-Trip Test` at 2025-07-18T04:18:41.923Z
+- **erschaffen** by `Round-Trip Test` at 2025-07-19T02:01:08.097Z
   > Element vom Typ 'TABELLE' erstellt.
-- **tested** by `round-trip:engine` at 2025-07-18T04:18:41.923Z
+- **tested** by `round-trip:engine` at 2025-07-19T02:01:08.098Z
   > Testing round-trip parsing

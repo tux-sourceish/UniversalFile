@@ -1,6 +1,6 @@
 {
   "name": "@tux-sourceish/universalfile",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Revolutionary spatial document format with Bagua-based metadata and hyperdimensional vector support",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -8,12 +8,7 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "test": "jest",
-    "example": "node examples/basic.js",
-    "docs": "typedoc",
-    "generate:proof": "ts-node scripts/generate-proof-of-life.ts",
-    "build:showcase": "npm run build && npm run generate:proof && npm run generate:vision",
-    "postbuild": "npm run build:showcase",
-    "playground": "npx http-server -c-1 -o playground/index.html"
+    "test-universalfile": "npx ts-node test-universalfile.ts"
   },
   "keywords": [
     "spatial-computing",

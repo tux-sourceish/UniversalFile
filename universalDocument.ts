@@ -15,7 +15,7 @@
  * 
  * // Add an item with origin tracking
  * const item = doc.createItem({
- *   type: UniversalDocument.ItemType.NOTIZZETTEL,
+ *   type: UniversalDocument.ItemType.VARIABLE,
  *   title: "My Note",
  *   position: { x: 100, y: 200, z: 0 },
  *   dimensions: { width: 300, height: 200 },
@@ -51,6 +51,21 @@
 // ======================================================================
 // TYP-DEFINITIONEN & SCHNITTSTELLEN (Evolutioniert)
 // ======================================================================
+
+/**
+ * Validation error for UD format parsing
+ */
+export class UDValidationError extends Error {
+  constructor(
+    message: string,
+    public errorType: string,
+    public itemId?: string,
+    public lineNumber?: number
+  ) {
+    super(message);
+    this.name = 'UDValidationError';
+  }
+}
 
 /**
  * Unique identifier for UniversalDocument items
@@ -153,11 +168,11 @@ export interface UDTransformation {
  * ```typescript
  * const item: UDItem = {
  *   id: "item_123",
- *   type: UniversalDocument.ItemType.NOTIZZETTEL,
+ *   type: UniversalDocument.ItemType.VARIABLE,
  *   title: "My Note",
  *   position: { x: 100, y: 200, z: 0 },
  *   dimensions: { width: 300, height: 200 },
- *   bagua_descriptor: UniversalDocument.BAGUA.KUN | UniversalDocument.BAGUA.XUN,
+ *   bagua_descriptor: UniversalDocument.BAGUA.ERDE | UniversalDocument.BAGUA.WIND,
  *   content: "Hello World",
  *   is_contextual: false,
  *   origin: { host: "localhost", path: "/workspace", tool: "UniversalDesktop" },
@@ -264,36 +279,67 @@ export interface UDMetadata {
 export class UniversalDocument {
   
   /** Current format version */
-  private static readonly VERSION = "2.7.0-kira";
+  private static readonly VERSION = "2.1.0-raimund"; // Version 2.1.0 "Raimund"
   /** Binary magic number for file identification */
-  private static readonly UD_MAGIC = 0x55440001;
+  private static readonly MAGIC = 0x55444152; // "UDAR" in hex
   
-  /** Bagua constants for metadata encoding */
+  // RAIMUNDS "FRÜHER HIMMEL" BAGUA SYSTEM
   static readonly BAGUA = {
-    QIAN:  0b000000001, // Bit 0: ☰ Heaven/Template/Master
-    DUI:   0b000000010, // Bit 1: ☱ Lake/Interactive
-    KUN:   0b000000100, // Bit 2: ☷ Earth/Data Container
-    LI:    0b000001000, // Bit 3: ☲ Fire/Searchable
-    XUN:   0b000010000, // Bit 4: ☴ Wind/Dynamic/Flowing
-    ZHEN:  0b000100000, // Bit 5: ☳ Thunder/Actionable
-    GEN:   0b001000000, // Bit 6: ☶ Mountain/Fixed/Immutable
-    KAN:   0b010000000, // Bit 7: ☵ Water/Linked/Connected
-    TAIJI: 0b100000000  // Bit 8: ☯ Center/Active/Focus
-  } as const;
+    HIMMEL: 0b000000001,  // 1 - Classes/Templates (☰)
+    WIND:   0b000000010,  // 2 - Views/UI (☴)
+    WASSER: 0b000000100,  // 3 - Procedures/Flow (☵)
+    BERG:   0b000001000,  // 4 - Init/Setup (☶)
+    SEE:    0b000010000,  // 5 - Properties (☱)
+    FEUER:  0b000100000,  // 6 - Functions (☲)
+    DONNER: 0b001000000,  // 7 - Events (☳)
+    ERDE:   0b010000000,  // 8 - Global/Base (☷)
+    TAIJI:  0b100000000   // 9 - Center/Unity (☯)
+  };
 
-  /** Item type enumeration */
+  // Raimunds Namen-Mapping mit deutschen Begriffen
+  static readonly BAGUA_NAMES = new Map([
+    [0b000000001, { symbol: '☰', name: 'Himmel', meaning: 'Classes/Templates', description: 'Meister-Elemente die geklont werden' }],
+    [0b000000010, { symbol: '☴', name: 'Wind',   meaning: 'Views/UI', description: 'Sichtbare Schnittstellen' }],
+    [0b000000100, { symbol: '☵', name: 'Wasser', meaning: 'Procedures/Flow', description: 'Fließende Abläufe' }],
+    [0b000001000, { symbol: '☶', name: 'Berg',   meaning: 'Init/Setup', description: 'Feste Initialisierung' }],
+    [0b000010000, { symbol: '☱', name: 'See',    meaning: 'Properties', description: 'Eigenschaften und Attribute' }],
+    [0b000100000, { symbol: '☲', name: 'Feuer',  meaning: 'Functions', description: 'Aktive Berechnungen' }],
+    [0b001000000, { symbol: '☳', name: 'Donner', meaning: 'Events', description: 'Ereignisse und Reaktionen' }],
+    [0b010000000, { symbol: '☷', name: 'Erde',   meaning: 'Global/Base', description: 'Grundlegende Daten' }],
+    [0b100000000, { symbol: '☯', name: 'Taiji',  meaning: 'Center/Unity', description: 'Die Einheit aller Dinge' }]
+  ]);
+
+  // ALGEBRAISCHER TRANSISTOR - Raimunds Geniestreich!
+  static transistor(condition: boolean): number {
+    return Math.pow(0, condition ? 0 : 1);
+    // true:  0^0 = 1 (AN)
+    // false: 0^1 = 0 (AUS)
+  }
+
+  // Polare Beziehungen des Frühen Himmels
+  static readonly POLAR_PAIRS = new Map([
+    [0b000000001, 0b010000000], // HIMMEL ↔ ERDE (1 ↔ 8)
+    [0b000000010, 0b001000000], // WIND ↔ DONNER (2 ↔ 7)
+    [0b000000100, 0b000100000], // WASSER ↔ FEUER (3 ↔ 6)
+    [0b000001000, 0b000010000], // BERG ↔ SEE (4 ↔ 5)
+    [0b010000000, 0b000000001], // ERDE ↔ HIMMEL (8 ↔ 1)
+    [0b001000000, 0b000000010], // DONNER ↔ WIND (7 ↔ 2)
+    [0b000100000, 0b000000100], // FEUER ↔ WASSER (6 ↔ 3)
+    [0b000010000, 0b000001000], // SEE ↔ BERG (5 ↔ 4)
+  ]);
+
   static readonly ItemType = {
-    NOTIZZETTEL: 0,   // Text notes
-    TABELLE: 1,       // Tables/spreadsheets
-    CODE: 2,          // Source code
-    TUI: 3,           // Terminal interfaces
-    BROWSER: 4,       // Web content
-    MEDIA: 5,         // Images/videos
-    CHART: 6,         // Data visualizations
-    CALENDAR: 7,      // Time-based data
-    AI_GENERATED: 8,  // AI-created content
-    DATABASE: 9,      // Hyperdimensional vector databases
-    SYSTEM: 10        // System-level items
+    VORTEX: 0,        // ☯ Unknown/Origin (TAIJI)
+    KONSTRUKTOR: 1,   // ☰ Code/Templates (HIMMEL)
+    TABELLE: 2,       // ☴ Tables/Views (WIND)
+    FLUSS: 3,         // ☵ Media/Streams (WASSER)
+    INIT: 4,          // ☶ Configuration (BERG)
+    EIGENSCHAFT: 5,   // ☱ Properties (SEE)
+    FUNKTION: 6,      // ☲ Functions (FEUER)
+    EREIGNIS: 7,      // ☳ Events/Triggers (DONNER)
+    VARIABLE: 8,      // ☷ Data/Storage (ERDE)
+    DATABASE: 9,      // Extended: Hyperdimensional
+    SYSTEM: 10        // Extended: System-level
   } as const;
 
   /** Internal storage for document items */
@@ -318,8 +364,13 @@ export class UniversalDocument {
    * ```
    */
   constructor() {
-    this.metadata = this.createDefaultMetadata();
-    console.log(`🌌 UniversalDocument v${UniversalDocument.VERSION} initialisiert. Bereit, die Welt zu beglücken.`);
+    this.metadata = {
+      format_version: "2.1.0",
+      creator: "UniversalFile with Raimund's Bagua",
+      created_at: new Date().toISOString(),
+      canvas_bounds: { x: 0, y: 0, width: 4096, height: 4096 },
+      item_count: 0
+    };
   }
   
   private createDefaultMetadata(): UDMetadata {
@@ -355,7 +406,7 @@ export class UniversalDocument {
    * @example
    * ```typescript
    * const item = doc.createItem({
-   *   type: UniversalDocument.ItemType.NOTIZZETTEL,
+   *   type: UniversalDocument.ItemType.VARIABLE,
    *   title: "My Note",
    *   position: { x: 100, y: 200, z: 0 },
    *   dimensions: { width: 300, height: 200 },
@@ -369,12 +420,14 @@ export class UniversalDocument {
    * ```
    */
   public createItem(options: Omit<UDItem, 'id' | 'created_at' | 'updated_at' | 'transformation_history' | 'bagua_descriptor'> & { bagua_descriptor?: number }, origin: UDOrigin): UDItem {
-    const id = `ud_item_${Date.now()}_${++UniversalDocument.idCounter}`;
-    const now = Date.now();
+    // Robust timestamp generation with microsecond precision
+    const baseTime = Date.now();
+    const microTime = baseTime + (++UniversalDocument.idCounter % 1000);
+    const id = `ud_item_${baseTime}_${UniversalDocument.idCounter}`;
 
     const creation_transform: UDTransformation = {
-      id: `ud_trans_${now}_${UniversalDocument.idCounter}`,
-      timestamp: now,
+      id: `ud_trans_${microTime}_${UniversalDocument.idCounter}`,
+      timestamp: microTime,
       verb: 'erschaffen',
       agent: origin.tool,
       description: `Element vom Typ '${Object.keys(UniversalDocument.ItemType)[options.type]}' erstellt.`
@@ -383,9 +436,9 @@ export class UniversalDocument {
     const newItem: UDItem = {
       ...options,
       id,
-      bagua_descriptor: options.bagua_descriptor || UniversalDocument.getDefaultBagua(options.type),
-      created_at: now,
-      updated_at: now,
+      bagua_descriptor: options.bagua_descriptor || this.getDefaultBagua(options.type),
+      created_at: microTime,
+      updated_at: microTime,
       origin: origin,
       transformation_history: [creation_transform],
     };
@@ -419,16 +472,20 @@ export class UniversalDocument {
     const item = this.items.get(id);
     if (!item) return undefined;
 
+    // Robust timestamp generation
+    const baseTime = Date.now();
+    const microTime = baseTime + (++UniversalDocument.idCounter % 1000);
+
     const newTransform: UDTransformation = {
-        id: `ud_trans_${Date.now()}`,
-        timestamp: Date.now(),
+        id: `ud_trans_${microTime}`,
+        timestamp: microTime,
         ...transformation
     };
 
     const updatedItem = { 
         ...item, 
         ...updates, 
-        updated_at: Date.now(),
+        updated_at: microTime,
         transformation_history: [...item.transformation_history, newTransform]
     };
     
@@ -457,34 +514,360 @@ export class UniversalDocument {
    * 
    * @example
    * ```typescript
-   * const bagua = UniversalDocument.getDefaultBagua(UniversalDocument.ItemType.NOTIZZETTEL);
+   * const bagua = UniversalDocument.getDefaultBagua(UniversalDocument.ItemType.VARIABLE);
    * console.log(`Default Bagua: ${bagua.toString(2)}`);
    * ```
    */
-  public static getDefaultBagua(type: number): number {
+  // Updated default Bagua assignments following Raimund's logic
+  public getDefaultBagua(type: number): number {
+    const defaults: Record<number, number> = {
+      [UniversalDocument.ItemType.VORTEX]: 
+        UniversalDocument.BAGUA.TAIJI, // Unity
+      [UniversalDocument.ItemType.KONSTRUKTOR]: 
+        UniversalDocument.BAGUA.HIMMEL | UniversalDocument.BAGUA.BERG, // Template with structure
+      [UniversalDocument.ItemType.TABELLE]: 
+        UniversalDocument.BAGUA.BERG | UniversalDocument.BAGUA.SEE, // Structure with properties
+      [UniversalDocument.ItemType.FLUSS]: 
+        UniversalDocument.BAGUA.WASSER | UniversalDocument.BAGUA.FEUER, // Flow with functions
+      [UniversalDocument.ItemType.INIT]: 
+        UniversalDocument.BAGUA.BERG, // Init/Setup
+      [UniversalDocument.ItemType.EIGENSCHAFT]: 
+        UniversalDocument.BAGUA.SEE, // Properties
+      [UniversalDocument.ItemType.FUNKTION]: 
+        UniversalDocument.BAGUA.FEUER, // Functions
+      [UniversalDocument.ItemType.EREIGNIS]: 
+        UniversalDocument.BAGUA.SEE | UniversalDocument.BAGUA.DONNER, // Properties with events
+      [UniversalDocument.ItemType.VARIABLE]: 
+        UniversalDocument.BAGUA.ERDE | UniversalDocument.BAGUA.WIND, // Base data with UI
+      [UniversalDocument.ItemType.DATABASE]: 
+        UniversalDocument.BAGUA.ERDE | UniversalDocument.BAGUA.WASSER, // Base with flow
+      [UniversalDocument.ItemType.SYSTEM]: 
+        UniversalDocument.BAGUA.WASSER | UniversalDocument.BAGUA.TAIJI // Flow with unity
+    };
+    return defaults[type] || UniversalDocument.BAGUA.ERDE;
+  }
+
+  // NEW: Query with algebraic transistor
+  public queryWithTransistor(query: Partial<Record<keyof typeof UniversalDocument.BAGUA, boolean>>, condition: boolean): UDItem[] {
+    const factor = UniversalDocument.transistor(condition);
+    
+    if (factor === 0) return []; // Optimization: skip if transistor is OFF
+    
+    let mask = 0;
+    let required = 0;
+
+    for (const [key, shouldHave] of Object.entries(query)) {
+      const bit = UniversalDocument.BAGUA[key as keyof typeof UniversalDocument.BAGUA];
+      if (bit !== undefined) {
+        mask |= bit;
+        if (shouldHave) required |= bit;
+      }
+    }
+
+    return this.allItems.filter(item => 
+      (item.bagua_descriptor & mask) === required
+    );
+  }
+
+  // NEW: Find polar opposite items
+  public findPolarOpposite(item: UDItem): UDItem[] {
+    const polarBagua = UniversalDocument.POLAR_PAIRS.get(item.bagua_descriptor);
+    if (polarBagua !== undefined) {
+      return this.allItems.filter(i => i.bagua_descriptor & polarBagua);
+    }
+    return [];
+  }
+
+  // NEW: Algebraic sort based on Bagua precedence
+  public sortByBaguaPrecedence(): UDItem[] {
+    return [...this.allItems].sort((a, b) => {
+      // Sort by Bagua value (Himmel first, then Wind, etc.)
+      const aBagua = Math.log2(a.bagua_descriptor & -a.bagua_descriptor); // Get lowest set bit
+      const bBagua = Math.log2(b.bagua_descriptor & -b.bagua_descriptor);
+      return aBagua - bBagua;
+    });
+  }
+
+  // Helper: Get Bagua symbols string
+  private getBaguaSymbols(descriptor: number): string {
+    let symbols = '';
+    for (const [value, info] of UniversalDocument.BAGUA_NAMES) {
+      if (descriptor & value) {
+        symbols += info.symbol;
+      }
+    }
+    return symbols || '○'; // Empty circle if no Bagua
+  }
+
+  // Helper: Get type name
+  private getTypeName(type: number): string {
+    const names: Record<number, string> = {
+      0: 'VORTEX',
+      1: 'KONSTRUKTOR',
+      2: 'TABELLE',
+      3: 'FLUSS',
+      4: 'INIT',
+      5: 'EIGENSCHAFT',
+      6: 'FUNKTION',
+      7: 'EREIGNIS',
+      8: 'VARIABLE',
+      9: 'DATABASE',
+      10: 'SYSTEM'
+    };
+    return names[type] || 'VORTEX';
+  }
+
+  // Helper: Serialize content based on type
+  private serializeContent(type: number, content: any): string {
     switch (type) {
-      case UniversalDocument.ItemType.NOTIZZETTEL:
-        return UniversalDocument.BAGUA.KUN | UniversalDocument.BAGUA.LI; // Data Container + Searchable
+      case UniversalDocument.ItemType.VARIABLE:
+        if (typeof content === 'string') return content;
+        return content.text || JSON.stringify(content);
+        
       case UniversalDocument.ItemType.TABELLE:
-        return UniversalDocument.BAGUA.KUN | UniversalDocument.BAGUA.DUI; // Data Container + Interactive
-      case UniversalDocument.ItemType.CODE:
-        return UniversalDocument.BAGUA.GEN | UniversalDocument.BAGUA.LI; // Fixed + Searchable
-      case UniversalDocument.ItemType.TUI:
-        return UniversalDocument.BAGUA.DUI | UniversalDocument.BAGUA.ZHEN; // Interactive + Actionable
-      case UniversalDocument.ItemType.BROWSER:
-        return UniversalDocument.BAGUA.DUI | UniversalDocument.BAGUA.KAN; // Interactive + Linked
-      case UniversalDocument.ItemType.MEDIA:
-        return UniversalDocument.BAGUA.KUN | UniversalDocument.BAGUA.GEN; // Data Container + Fixed
-      case UniversalDocument.ItemType.CHART:
-        return UniversalDocument.BAGUA.XUN | UniversalDocument.BAGUA.LI; // Dynamic + Searchable
-      case UniversalDocument.ItemType.CALENDAR:
-        return UniversalDocument.BAGUA.XUN | UniversalDocument.BAGUA.KAN; // Dynamic + Linked
-      case UniversalDocument.ItemType.AI_GENERATED:
-        return UniversalDocument.BAGUA.XUN | UniversalDocument.BAGUA.TAIJI; // Dynamic + Active
-      case UniversalDocument.ItemType.DATABASE:
-        return UniversalDocument.BAGUA.KUN | UniversalDocument.BAGUA.LI | UniversalDocument.BAGUA.KAN; // Container + Searchable + Linked
+        if (content.headers && content.rows) {
+          let result = '| ' + content.headers.join(' | ') + ' |\n';
+          result += '| ' + content.headers.map(() => '---').join(' | ') + ' |\n';
+          for (const row of content.rows) {
+            result += '| ' + row.join(' | ') + ' |\n';
+          }
+          return result;
+        }
+        return JSON.stringify(content);
+        
+      case UniversalDocument.ItemType.KONSTRUKTOR:
+        if (content.code) return '```typescript\n' + content.code + '\n```';
+        return JSON.stringify(content);
+        
       default:
-        return UniversalDocument.BAGUA.KUN; // Default to Data Container
+        return JSON.stringify(content);
+    }
+  }
+
+  // Bracket validation with helpful errors
+  private static validateBrackets(text: string): void {
+    const stack: { bracket: string, line: number, col: number }[] = [];
+    const lines = text.split('\n');
+    const bracketPairs = { '(': ')', '[': ']', '{': '}' };
+    const closingBrackets = new Set([')', ']', '}']);
+    
+    for (let lineNum = 0; lineNum < lines.length; lineNum++) {
+      const line = lines[lineNum];
+      for (let col = 0; col < line.length; col++) {
+        const char = line[col];
+        
+        if (char in bracketPairs) {
+          stack.push({ bracket: char, line: lineNum + 1, col: col + 1 });
+        } else if (closingBrackets.has(char)) {
+          if (stack.length === 0) {
+            throw new UDValidationError(
+              `Unexpected closing bracket '${char}' at line ${lineNum + 1}, column ${col + 1}`,
+              'brackets',
+              undefined,
+              lineNum + 1
+            );
+          }
+          
+          const opened = stack.pop()!;
+          const expected = bracketPairs[opened.bracket as keyof typeof bracketPairs];
+          if (char !== expected) {
+            throw new UDValidationError(
+              `Mismatched brackets: expected '${expected}' but found '${char}' at line ${lineNum + 1}, column ${col + 1} (opened at line ${opened.line}, column ${opened.col})`,
+              'brackets',
+              undefined,
+              lineNum + 1
+            );
+          }
+        }
+      }
+    }
+    
+    if (stack.length > 0) {
+      const unclosed = stack[stack.length - 1];
+      throw new UDValidationError(
+        `Unclosed bracket '${unclosed.bracket}' opened at line ${unclosed.line}, column ${unclosed.col}`,
+        'brackets',
+        undefined,
+        unclosed.line
+      );
+    }
+  }
+
+  // Helper: Parse fields from block
+  private static parseFields(block: string): Record<string, string> {
+    const fields: Record<string, string> = {};
+    const lines = block.split('\n');
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('([{') && !trimmed.startsWith('}])') && !trimmed.startsWith('-')) {
+        const colonIndex = trimmed.indexOf(':');
+        if (colonIndex > 0) {
+          const key = trimmed.substring(0, colonIndex).trim();
+          const value = trimmed.substring(colonIndex + 1).trim();
+          fields[key] = value;
+        }
+      }
+    }
+    
+    return fields;
+  }
+
+  // Helper: Parse type name to number
+  private static parseType(typeName: string): number {
+    const typeMap: Record<string, number> = {
+      'VORTEX': 0,
+      'KONSTRUKTOR': 1,
+      'TABELLE': 2,
+      'FLUSS': 3,
+      'INIT': 4,
+      'EIGENSCHAFT': 5,
+      'FUNKTION': 6,
+      'EREIGNIS': 7,
+      'VARIABLE': 8,
+      'DATABASE': 9,
+      'SYSTEM': 10
+    };
+    return typeMap[typeName] || 0;
+  }
+
+  // Helper: Parse position string
+  private static parsePosition(positionStr: string): UDPosition {
+    const match = positionStr.match(/\{x:\s*(-?\d+),\s*y:\s*(-?\d+),\s*z:\s*(-?\d+)\}/);
+    if (match) {
+      return {
+        x: parseInt(match[1]),
+        y: parseInt(match[2]),
+        z: parseInt(match[3])
+      };
+    }
+    return { x: 0, y: 0, z: 0 };
+  }
+
+  // Helper: Parse dimensions string
+  private static parseDimensions(dimensionsStr: string): { width: number; height: number } {
+    const match = dimensionsStr.match(/\{width:\s*(\d+),\s*height:\s*(\d+)\}/);
+    if (match) {
+      return {
+        width: parseInt(match[1]),
+        height: parseInt(match[2])
+      };
+    }
+    return { width: 100, height: 100 };
+  }
+
+  // Helper: Parse Bagua descriptor
+  private static parseBagua(baguaStr: string): number {
+    const match = baguaStr.match(/\((\d+)\)$/);
+    if (match) {
+      return parseInt(match[1]);
+    }
+    return 0;
+  }
+
+  // Helper: Parse origin block
+  private static parseOriginBlock(block: string): UDOrigin {
+    const fields = this.parseFields(block);
+    return {
+      host: fields.host || 'localhost',
+      path: fields.path || '/workspace',
+      tool: fields.tool || 'UniversalDocument',
+      device: fields.device
+    };
+  }
+
+  // Helper: Parse history block
+  private static parseHistoryBlock(block: string): UDTransformation[] {
+    const history: UDTransformation[] = [];
+    const lines = block.split('\n');
+    let currentTransform: Partial<UDTransformation> = {};
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('- verb:')) {
+        // Save previous transform if complete
+        if (currentTransform.verb) {
+          history.push(currentTransform as UDTransformation);
+        }
+        // Start new transform
+        currentTransform = {
+          id: `ud_trans_${Date.now()}_${Math.random()}`,
+          verb: trimmed.substring(7).trim()
+        };
+      } else if (trimmed.startsWith('agent:')) {
+        currentTransform.agent = trimmed.substring(6).trim();
+      } else if (trimmed.startsWith('timestamp:')) {
+        const timeStr = trimmed.substring(10).trim();
+        currentTransform.timestamp = new Date(timeStr).getTime();
+      } else if (trimmed.startsWith('description:')) {
+        currentTransform.description = trimmed.substring(12).trim();
+      } else if (trimmed.startsWith('previous_state_ref:')) {
+        currentTransform.previous_state_ref = trimmed.substring(19).trim();
+      }
+    }
+    
+    // Save last transform
+    if (currentTransform.verb) {
+      history.push(currentTransform as UDTransformation);
+    }
+    
+    return history;
+  }
+
+  // Helper: Parse content block
+  private static parseContent(type: number, contentBlock: string): any {
+    const trimmed = contentBlock.trim();
+    
+    switch (type) {
+      case UniversalDocument.ItemType.VARIABLE:
+        // Simple text content
+        return { text: trimmed };
+        
+      case UniversalDocument.ItemType.TABELLE:
+        // Parse markdown table
+        if (trimmed.includes('|')) {
+          const lines = trimmed.split('\n').filter(l => l.trim());
+          if (lines.length >= 3) {
+            const headers = lines[0].split('|').map(h => h.trim()).filter(h => h);
+            const rows = lines.slice(2).map(row => 
+              row.split('|').map(cell => cell.trim()).filter(cell => cell)
+            );
+            return { headers, rows };
+          }
+        }
+        return { text: trimmed };
+        
+      case UniversalDocument.ItemType.KONSTRUKTOR:
+        // Parse code blocks
+        if (trimmed.startsWith('```') && trimmed.endsWith('```')) {
+          const code = trimmed.substring(3, trimmed.length - 3);
+          const firstNewline = code.indexOf('\n');
+          return { code: firstNewline > 0 ? code.substring(firstNewline + 1) : code };
+        }
+        return { text: trimmed };
+        
+      default:
+        try {
+          return JSON.parse(trimmed);
+        } catch {
+          return { text: trimmed };
+        }
+    }
+  }
+
+  // Helper: Validate item completeness
+  private static validateItem(item: Partial<UDItem>): void {
+    if (!item.id) {
+      throw new UDValidationError('Item missing required field: id', 'validation');
+    }
+    if (item.type === undefined) {
+      throw new UDValidationError('Item missing required field: type', 'validation', item.id);
+    }
+    if (!item.position) {
+      throw new UDValidationError('Item missing required field: position', 'validation', item.id);
+    }
+    if (!item.dimensions) {
+      throw new UDValidationError('Item missing required field: dimensions', 'validation', item.id);
     }
   }
 
@@ -515,38 +898,89 @@ export class UniversalDocument {
    * ```
    */
   public toBinary(): ArrayBuffer {
-    // Serialize metadata and items to JSON first
-    const metadataJson = JSON.stringify(this.metadata);
-    const itemsJson = JSON.stringify(Array.from(this.items.values()));
+    // HYBRID UD FORMAT - Bracket notation standard!
+    let udContent = '';
     
-    // Calculate offsets
-    const headerSize = 16; // UD_MAGIC (4) + VERSION (2) + METADATA_OFFSET (4) + ITEMS_OFFSET (4) + padding (2)
-    const metadataOffset = headerSize;
-    const itemsOffset = metadataOffset + metadataJson.length * 2; // UTF-16 encoding
-    const totalSize = itemsOffset + itemsJson.length * 2;
+    // Document header with bracket notation
+    udContent += '---ud-document\n';
+    udContent += '([{\n';
+    udContent += `  version: ${this.metadata.format_version}\n`;
+    udContent += `  creator: ${this.metadata.creator}\n`;
+    udContent += `  created_at: ${this.metadata.created_at}\n`;
+    udContent += `  canvas_bounds: {x: ${this.metadata.canvas_bounds.x}, y: ${this.metadata.canvas_bounds.y}, width: ${this.metadata.canvas_bounds.width}, height: ${this.metadata.canvas_bounds.height}}\n`;
+    if (this.metadata.presets) {
+      udContent += `  presets:\n`;
+      udContent += `    tui_formats: ${JSON.stringify(this.metadata.presets.tui_formats)}\n`;
+    }
+    udContent += '}])\n';
+    udContent += '---ud-document-end\n\n';
     
-    // Create buffer
+    // Items with proper bracket notation
+    for (const item of Array.from(this.items.values())) {
+      udContent += '([{ITEM\n';
+      udContent += `  id: ${item.id}\n`;
+      udContent += `  type: ${this.getTypeName(item.type)}\n`;
+      udContent += `  title: ${item.title || 'Untitled'}\n`;
+      udContent += `  position: {x: ${item.position.x}, y: ${item.position.y}, z: ${item.position.z}}\n`;
+      udContent += `  dimensions: {width: ${item.dimensions.width}, height: ${item.dimensions.height}}\n`;
+      udContent += `  bagua: ${this.getBaguaSymbols(item.bagua_descriptor)} (${item.bagua_descriptor})\n`;
+      udContent += `  is_contextual: ${item.is_contextual}\n`;
+      udContent += `  created_at: ${new Date(item.created_at).toISOString()}\n`;
+      udContent += `  updated_at: ${new Date(item.updated_at).toISOString()}\n`;
+      
+      // Origin block (nested)
+      if (item.origin) {
+        udContent += '  ([{ORIGIN\n';
+        udContent += `    host: ${item.origin.host}\n`;
+        udContent += `    path: ${item.origin.path}\n`;
+        udContent += `    tool: ${item.origin.tool}\n`;
+        if (item.origin.device) {
+          udContent += `    device: ${item.origin.device}\n`;
+        }
+        udContent += '  }])\n';
+      }
+      
+      // Transformation history block (nested)
+      if (item.transformation_history.length > 0) {
+        udContent += '  ([{HISTORY\n';
+        for (const trans of item.transformation_history) {
+          udContent += `    - verb: ${trans.verb}\n`;
+          udContent += `      agent: ${trans.agent}\n`;
+          udContent += `      timestamp: ${new Date(trans.timestamp).toISOString()}\n`;
+          udContent += `      description: ${trans.description}\n`;
+          if (trans.previous_state_ref) {
+            udContent += `      previous_state_ref: ${trans.previous_state_ref}\n`;
+          }
+        }
+        udContent += '  }])\n';
+      }
+      
+      udContent += '}])\n\n';
+      
+      // Content block
+      udContent += '([{CONTENT\n';
+      udContent += this.serializeContent(item.type, item.content);
+      udContent += '\n}])\n\n';
+    }
+    
+    // Convert to binary with UDAR header
+    const contentBytes = new TextEncoder().encode(udContent);
+    const headerSize = 16;
+    const totalSize = headerSize + contentBytes.length;
+    
     const buffer = new ArrayBuffer(totalSize);
     const view = new DataView(buffer);
     
-    // Write header
-    view.setUint32(0, UniversalDocument.UD_MAGIC, true); // Little endian
-    view.setUint16(4, 0x0207, true); // Version 2.7
-    view.setUint32(6, metadataOffset, true);
-    view.setUint32(10, itemsOffset, true);
-    view.setUint16(14, 0x0000, true); // Padding
+    // Write binary header
+    view.setUint32(0, UniversalDocument.MAGIC, true); // UDAR
+    view.setUint16(4, 0x0210, true); // Version 2.1.0 Raimund
+    view.setUint32(6, headerSize, true); // Content offset
+    view.setUint32(10, contentBytes.length, true); // Content length
+    view.setUint16(14, 0x5544, true); // "UD" signature
     
-    // Write metadata as UTF-16
-    const metadataArray = new Uint16Array(buffer, metadataOffset, metadataJson.length);
-    for (let i = 0; i < metadataJson.length; i++) {
-      metadataArray[i] = metadataJson.charCodeAt(i);
-    }
-    
-    // Write items as UTF-16
-    const itemsArray = new Uint16Array(buffer, itemsOffset, itemsJson.length);
-    for (let i = 0; i < itemsJson.length; i++) {
-      itemsArray[i] = itemsJson.charCodeAt(i);
-    }
+    // Write UD content
+    const contentArray = new Uint8Array(buffer, headerSize);
+    contentArray.set(contentBytes);
     
     return buffer;
   }
@@ -567,44 +1001,107 @@ export class UniversalDocument {
   public static fromBinary(buffer: ArrayBuffer): UniversalDocument {
     const view = new DataView(buffer);
     
-    // Read header
+    // Read binary header
     const magic = view.getUint32(0, true);
-    if (magic !== UniversalDocument.UD_MAGIC) {
+    if (magic !== UniversalDocument.MAGIC) {
       throw new Error('Invalid UniversalDocument magic number');
     }
     
     const version = view.getUint16(4, true);
-    const metadataOffset = view.getUint32(6, true);
-    const itemsOffset = view.getUint32(10, true);
+    const contentOffset = view.getUint32(6, true);
+    const contentLength = view.getUint32(10, true);
+    const signature = view.getUint16(14, true); // Should be "DU"
     
-    // Read metadata
-    const metadataLength = (itemsOffset - metadataOffset) / 2;
-    const metadataArray = new Uint16Array(buffer, metadataOffset, metadataLength);
-    let metadataJson = '';
-    for (let i = 0; i < metadataLength; i++) {
-      metadataJson += String.fromCharCode(metadataArray[i]);
-    }
+    // Read UD content
+    const contentArray = new Uint8Array(buffer, contentOffset, contentLength);
+    const udContent = new TextDecoder().decode(contentArray);
     
-    // Read items
-    const itemsLength = (buffer.byteLength - itemsOffset) / 2;
-    const itemsArray = new Uint16Array(buffer, itemsOffset, itemsLength);
-    let itemsJson = '';
-    for (let i = 0; i < itemsLength; i++) {
-      itemsJson += String.fromCharCode(itemsArray[i]);
-    }
-    
-    // Create document
+    // Parse hybrid UD format
     const doc = new UniversalDocument();
-    doc.metadata = JSON.parse(metadataJson);
     
-    // Restore items
-    const items: UDItem[] = JSON.parse(itemsJson);
-    doc.items.clear();
-    for (const item of items) {
-      doc.items.set(item.id, item);
+    // Parse document metadata using new parser  
+    const docMatch = udContent.match(/---ud-document\s*\(\[\{([\s\S]*?)\}\]\)\s*---ud-document-end/);
+    if (docMatch) {
+      const metadataBlock = docMatch[1];
+      const fields = UniversalDocument.parseFields(metadataBlock);
+      
+      doc.metadata.format_version = fields.version || doc.metadata.format_version;
+      doc.metadata.creator = fields.creator || doc.metadata.creator;
+      doc.metadata.created_at = fields.created_at || doc.metadata.created_at;
+      
+      // Parse canvas bounds
+      if (fields.canvas_bounds) {
+        const match = fields.canvas_bounds.match(/\{x:\s*(-?\d+),\s*y:\s*(-?\d+),\s*width:\s*(\d+),\s*height:\s*(\d+)\}/);
+        if (match) {
+          doc.metadata.canvas_bounds = {
+            x: parseInt(match[1]),
+            y: parseInt(match[2]),
+            width: parseInt(match[3]),
+            height: parseInt(match[4])
+          };
+        }
+      }
     }
     
+    // Find all item blocks with their content using new parser
+    const itemRegex = /\(\[\{ITEM([\s\S]*?)\}\]\)\s*\(\[\{CONTENT([\s\S]*?)\}\]\)/g;
+    let match;
+    
+    while ((match = itemRegex.exec(udContent)) !== null) {
+      const itemBlock = match[1];
+      const contentBlock = match[2];
+      
+      try {
+        const item = UniversalDocument.parseItemBlock(itemBlock, contentBlock);
+        doc.items.set(item.id, item);
+      } catch (error) {
+        console.warn('Failed to parse item block:', error);
+        // Continue parsing other items
+      }
+    }
+    
+    doc.metadata.item_count = doc.items.size;
     return doc;
+  }
+  
+  /**
+   * Parse item block with nested structures
+   */
+  private static parseItemBlock(itemBlock: string, contentBlock: string): UDItem {
+    // Parse basic fields
+    const fields = this.parseFields(itemBlock);
+    
+    const item: Partial<UDItem> = {
+      id: fields.id || `ud_item_${Date.now()}_${Math.random()}`,
+      type: this.parseType(fields.type || 'VORTEX'),
+      title: fields.title || '',
+      position: this.parsePosition(fields.position || '{x: 0, y: 0, z: 0}'),
+      dimensions: this.parseDimensions(fields.dimensions || '{width: 100, height: 100}'),
+      bagua_descriptor: this.parseBagua(fields.bagua || '(0)'),
+      is_contextual: fields.is_contextual === 'true',
+      created_at: fields.created_at ? new Date(fields.created_at).getTime() : Date.now(),
+      updated_at: fields.updated_at ? new Date(fields.updated_at).getTime() : Date.now(),
+      transformation_history: []
+    };
+    
+    // Parse nested blocks
+    const originMatch = itemBlock.match(/\(\[\{ORIGIN([\s\S]*?)\}\]\)/);
+    if (originMatch) {
+      item.origin = this.parseOriginBlock(originMatch[1]);
+    }
+    
+    const historyMatch = itemBlock.match(/\(\[\{HISTORY([\s\S]*?)\}\]\)/);
+    if (historyMatch) {
+      item.transformation_history = this.parseHistoryBlock(historyMatch[1]);
+    }
+    
+    // Parse content
+    item.content = this.parseContent(item.type!, contentBlock.trim());
+    
+    // Validate the item
+    this.validateItem(item);
+    
+    return item as UDItem;
   }
 
   /**
@@ -615,7 +1112,7 @@ export class UniversalDocument {
    * 
    * @example
    * ```typescript
-   * const windItems = doc.queryByBagua({ XUN: true });
+   * const windItems = doc.queryByBagua({ WIND: true });
    * const taijiItems = doc.queryByBagua({ TAIJI: true });
    * ```
    */
@@ -645,7 +1142,7 @@ export class UniversalDocument {
    * @example
    * ```typescript
    * const item = doc.addItem({
-   *   type: UniversalDocument.ItemType.NOTIZZETTEL,
+   *   type: UniversalDocument.ItemType.VARIABLE,
    *   position: { x: 0, y: 0, z: 0 },
    *   content: { text: "Hello World" }
    * });
@@ -704,8 +1201,8 @@ export class UniversalDocument {
       if (item.origin) {
         lines.push(`ud-origin: ${item.origin.host}:${item.origin.path} (${item.origin.tool})`);
       }
-      lines.push(`ud-created: ${new Date(item.created_at).toISOString()}`);
-      lines.push(`ud-updated: ${new Date(item.updated_at).toISOString()}`);
+      lines.push(`ud-created: ${this.safeISOString(item.created_at)}`);
+      lines.push(`ud-updated: ${this.safeISOString(item.updated_at)}`);
       lines.push('---');
       lines.push('');
       
@@ -733,39 +1230,184 @@ export class UniversalDocument {
   }
 
   /**
-   * KIRA's PROPOSAL: Load from interactive markdown format
-   * Deserializes document from markdown with YAML frontmatter
+   * Universal text parser with format auto-detection
+   * Supports both hybrid bracket format and markdown format
    * 
-   * @param text - Markdown text with UD metadata
+   * @param text - Text in either hybrid or markdown format
    * @returns New UniversalDocument instance
    */
   public static fromText(text: string): UniversalDocument {
+    // Format detection
+    if (text.includes('([{ITEM')) {
+      return UniversalDocument.fromHybridText(text);
+    } else if (text.includes('---\nud-format:')) {
+      return UniversalDocument.fromMarkdownText(text);
+    } else {
+      throw new UDValidationError(
+        'Unknown text format. Expected hybrid bracket format or markdown with YAML frontmatter.',
+        'format'
+      );
+    }
+  }
+
+  /**
+   * Parse hybrid bracket format (toBinary output format)
+   * Uses existing parseItemBlock infrastructure
+   */
+  private static fromHybridText(text: string): UniversalDocument {
+    try {
+      // Validate brackets first
+      UniversalDocument.validateBrackets(text);
+    } catch (error) {
+      if (error instanceof UDValidationError) {
+        throw error;
+      }
+      throw new UDValidationError(
+        `Bracket validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'brackets'
+      );
+    }
+    
+    const doc = new UniversalDocument();
+    
+    // Parse document metadata using existing parser  
+    const docMatch = text.match(/---ud-document\s*\(\[\{([\s\S]*?)\}\]\)\s*---ud-document-end/);
+    if (docMatch) {
+      try {
+        const metadataBlock = docMatch[1];
+        const fields = UniversalDocument.parseFields(metadataBlock);
+        
+        doc.metadata.format_version = fields.version || doc.metadata.format_version;
+        doc.metadata.creator = fields.creator || doc.metadata.creator;
+        doc.metadata.created_at = fields.created_at || doc.metadata.created_at;
+        
+        // Parse canvas bounds
+        if (fields.canvas_bounds) {
+          const match = fields.canvas_bounds.match(/\{x:\s*(-?\d+),\s*y:\s*(-?\d+),\s*width:\s*(\d+),\s*height:\s*(\d+)\}/);
+          if (match) {
+            doc.metadata.canvas_bounds = {
+              x: parseInt(match[1]),
+              y: parseInt(match[2]),
+              width: parseInt(match[3]),
+              height: parseInt(match[4])
+            };
+          }
+        }
+      } catch (error) {
+        throw new UDValidationError(
+          `Failed to parse document metadata: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          'metadata'
+        );
+      }
+    } else {
+      throw new UDValidationError(
+        'Document metadata block not found. Expected ---ud-document ... ---ud-document-end',
+        'format'
+      );
+    }
+    
+    // Find all item blocks with their content using existing parser
+    const itemRegex = /\(\[\{ITEM([\s\S]*?)\}\]\)\s*\(\[\{CONTENT([\s\S]*?)\}\]\)/g;
+    let match;
+    let itemCount = 0;
+    
+    while ((match = itemRegex.exec(text)) !== null) {
+      const itemBlock = match[1];
+      const contentBlock = match[2];
+      itemCount++;
+      
+      try {
+        const item = UniversalDocument.parseItemBlock(itemBlock, contentBlock);
+        doc.items.set(item.id, item);
+      } catch (error) {
+        const itemError = error instanceof UDValidationError ? error : 
+          new UDValidationError(
+            `Failed to parse item ${itemCount}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            'item_parse',
+            undefined,
+            undefined
+          );
+        throw itemError;
+      }
+    }
+    
+    if (itemCount === 0) {
+      throw new UDValidationError(
+        'No items found in hybrid format. Expected at least one ([{ITEM ... }]) ([{CONTENT ... }]) block.',
+        'format'
+      );
+    }
+    
+    doc.metadata.item_count = doc.items.size;
+    return doc;
+  }
+
+  /**
+   * Parse markdown format with YAML frontmatter
+   * Updated for Raimund's Bagua system constants
+   */
+  private static fromMarkdownText(text: string): UniversalDocument {
     const doc = new UniversalDocument();
     
     // Split by --- to get sections
     const sections = text.split('---');
     
+    if (sections.length < 3) {
+      throw new UDValidationError(
+        'Invalid markdown format. Expected YAML frontmatter delimited by ---',
+        'format'
+      );
+    }
+    
     // Parse document frontmatter (first section)
-    if (sections.length > 0) {
+    try {
       const docMeta = sections[0];
       const metaLines = docMeta.split('\n').filter(l => l.includes(':'));
       
       for (const line of metaLines) {
-        const [key, value] = line.split(':').map(s => s.trim());
-        if (key === 'ud-creator') doc.metadata.creator = value;
-        if (key === 'ud-created') doc.metadata.created_at = value;
-        if (key === 'ud-format') doc.metadata.format_version = value;
-        if (key === 'ud-canvas') {
-          const coords = value.split(',').map(Number);
-          if (coords.length === 4) {
-            doc.metadata.canvas_bounds = {
-              x: coords[0], y: coords[1], 
-              width: coords[2], height: coords[3]
-            };
-          }
+        const colonIndex = line.indexOf(':');
+        if (colonIndex === -1) continue;
+        
+        const key = line.substring(0, colonIndex).trim();
+        const value = line.substring(colonIndex + 1).trim();
+        
+        switch (key) {
+          case 'ud-creator':
+            doc.metadata.creator = value;
+            break;
+          case 'ud-created':
+            doc.metadata.created_at = value;
+            break;
+          case 'ud-format':
+            doc.metadata.format_version = value;
+            break;
+          case 'ud-canvas':
+            const coords = value.split(',').map(Number);
+            if (coords.length === 4 && coords.every(n => !isNaN(n))) {
+              doc.metadata.canvas_bounds = {
+                x: coords[0], y: coords[1], 
+                width: coords[2], height: coords[3]
+              };
+            } else {
+              throw new UDValidationError(
+                `Invalid canvas bounds format: ${value}. Expected "x,y,width,height"`,
+                'metadata'
+              );
+            }
+            break;
         }
       }
+    } catch (error) {
+      if (error instanceof UDValidationError) {
+        throw error;
+      }
+      throw new UDValidationError(
+        `Failed to parse document frontmatter: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'metadata'
+      );
     }
+    
+    let itemCount = 0;
     
     // Parse items from remaining sections (skip document content section)
     // Structure: [0: doc-frontmatter, 1: empty, 2: doc-content, 3: item1-meta, 4: item1-content, 5: item2-meta, 6: item2-content, ...]
@@ -775,11 +1417,28 @@ export class UniversalDocument {
       
       // Only process if we have metadata section
       if (itemMeta && itemMeta.trim() && itemMeta.includes('ud-id:')) {
-        const item = doc.parseItemFromText(itemMeta, itemContent);
-        if (item) {
-          doc.items.set(item.id, item);
+        itemCount++;
+        try {
+          const item = doc.parseItemFromText(itemMeta, itemContent);
+          if (item) {
+            doc.items.set(item.id, item);
+          }
+        } catch (error) {
+          throw new UDValidationError(
+            `Failed to parse markdown item ${itemCount}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            'item_parse',
+            undefined,
+            Math.floor(i / 2) + 1 // Approximate line number
+          );
         }
       }
+    }
+    
+    if (itemCount === 0) {
+      throw new UDValidationError(
+        'No items found in markdown format. Expected at least one item section with ud-id metadata.',
+        'format'
+      );
     }
     
     doc.metadata.item_count = doc.items.size;
@@ -850,21 +1509,36 @@ export class UniversalDocument {
 
   private baguaToString(descriptor: number): string {
     const flags: string[] = [];
-    if (descriptor & UniversalDocument.BAGUA.QIAN) flags.push('QIAN');
-    if (descriptor & UniversalDocument.BAGUA.DUI) flags.push('DUI');
-    if (descriptor & UniversalDocument.BAGUA.KUN) flags.push('KUN');
-    if (descriptor & UniversalDocument.BAGUA.LI) flags.push('LI');
-    if (descriptor & UniversalDocument.BAGUA.XUN) flags.push('XUN');
-    if (descriptor & UniversalDocument.BAGUA.ZHEN) flags.push('ZHEN');
-    if (descriptor & UniversalDocument.BAGUA.GEN) flags.push('GEN');
-    if (descriptor & UniversalDocument.BAGUA.KAN) flags.push('KAN');
+    if (descriptor & UniversalDocument.BAGUA.HIMMEL) flags.push('HIMMEL');
+    if (descriptor & UniversalDocument.BAGUA.SEE) flags.push('SEE');
+    if (descriptor & UniversalDocument.BAGUA.ERDE) flags.push('ERDE');
+    if (descriptor & UniversalDocument.BAGUA.FEUER) flags.push('FEUER');
+    if (descriptor & UniversalDocument.BAGUA.WIND) flags.push('WIND');
+    if (descriptor & UniversalDocument.BAGUA.DONNER) flags.push('DONNER');
+    if (descriptor & UniversalDocument.BAGUA.BERG) flags.push('BERG');
+    if (descriptor & UniversalDocument.BAGUA.WASSER) flags.push('WASSER');
     if (descriptor & UniversalDocument.BAGUA.TAIJI) flags.push('TAIJI');
     return flags.join('|');
   }
 
+  private safeISOString(timestamp: number): string {
+    try {
+      if (!timestamp || isNaN(timestamp)) {
+        return new Date().toISOString();
+      }
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) {
+        return new Date().toISOString();
+      }
+      return date.toISOString();
+    } catch (error) {
+      return new Date().toISOString();
+    }
+  }
+
   private renderItemContent(item: UDItem): string {
     switch (item.type) {
-      case UniversalDocument.ItemType.NOTIZZETTEL:
+      case UniversalDocument.ItemType.VARIABLE:
         return typeof item.content === 'string' ? item.content : 
                item.content.text || JSON.stringify(item.content);
       
@@ -879,7 +1553,7 @@ export class UniversalDocument {
         }
         return JSON.stringify(item.content);
       
-      case UniversalDocument.ItemType.CODE:
+      case UniversalDocument.ItemType.KONSTRUKTOR:
         return '```\n' + (item.content.code || JSON.stringify(item.content)) + '\n```';
       
       default:
@@ -1026,13 +1700,13 @@ export class UniversalDocument {
 
   private parseContentByType(type: number, content: string): any {
     switch (type) {
-      case UniversalDocument.ItemType.NOTIZZETTEL:
+      case UniversalDocument.ItemType.VARIABLE:
         return { text: content };
       
       case UniversalDocument.ItemType.TABELLE:
         return this.parseTableFromMarkdown(content);
       
-      case UniversalDocument.ItemType.CODE:
+      case UniversalDocument.ItemType.KONSTRUKTOR:
         // Remove code fences
         const codeMatch = content.match(/```[\s\S]*?\n([\s\S]*?)\n```/);
         return { code: codeMatch ? codeMatch[1] : content };
