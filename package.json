@@ -1,26 +1,60 @@
 {
   "name": "@tux-sourceish/universalfile",
-  "version": "2.1.0",
-  "description": "Revolutionary spatial document format with Bagua-based metadata and hyperdimensional vector support",
+  "version": "2.0.0-fractal",
+  "description": "Revolutionary spatial document format with Bagua-based classification, fractal territories, and complete transformation history",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "module": "src/index.ts",
+  "files": [
+    "dist/",
+    "src/",
+    "playground/",
+    "examples/",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
     "test": "jest",
-    "test-universalfile": "npx ts-node test-universalfile.ts"
+    "test-universalfile": "npx ts-node test-universalfile.ts",
+    "playground": "open playground/index.html",
+    "demo": "npx ts-node -e \"import { μ1_UDFactory } from './src/index'; console.log(μ1_UDFactory.μ1_createDemo().toMarkdown());\""
   },
   "keywords": [
     "spatial-computing",
     "bagua",
-    "vector-database",
-    "minimap",
-    "universalfile",
+    "i-ching",
+    "universal-file",
+    "fractal-territories", 
+    "algebraic-transistor",
+    "transformation-history",
+    "binary-format",
+    "philosophical-computing",
+    "raimund-bagua",
     "hyperdimensional",
-    "ai-enhanced",
-    "binary-format"
+    "zero-dependencies",
+    "typescript-ready"
   ],
-  "author": "tux-sourceish <florian.schneider@ullrichbau.de>",
+  "author": {
+    "name": "SingularUniverse Team",
+    "email": "florian.schneider@ullrichbau.de",
+    "url": "https://github.com/tux-sourceish"
+  },
+  "contributors": [
+    {
+      "name": "Raimund",
+      "role": "Visionary - μX-Bagua Philosophy Creator"
+    },
+    {
+      "name": "tux-sourceish", 
+      "role": "TypeScript Implementation"
+    },
+    {
+      "name": "KIRA & NEXUS",
+      "role": "AI-Assisted Development"
+    }
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -30,15 +64,46 @@
   "bugs": {
     "url": "https://github.com/tux-sourceish/UniversalFile/issues"
   },
+  "engines": {
+    "node": ">=16.0.0"
+  },
   "devDependencies": {
-    "@types/node": "^18.19.119",
+    "@types/node": "^20.0.0",
     "jest": "^29.0.0",
-    "typedoc": "^0.24.0",
+    "ts-node": "^10.9.0",
     "typescript": "^5.8.3"
   },
-  "files": [
-    "dist/",
-    "README.md",
-    "LICENSE"
-  ]
+  "dependencies": {},
+  "peerDependencies": {},
+  "browserslist": [
+    "> 1%",
+    "last 2 versions",
+    "not dead"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./core": {
+      "import": "./dist/core/index.js",
+      "require": "./dist/core/index.js", 
+      "types": "./dist/core/index.d.ts"
+    },
+    "./fractal": {
+      "import": "./dist/fractal/index.js",
+      "require": "./dist/fractal/index.js",
+      "types": "./dist/fractal/index.d.ts"
+    }
+  },
+  "funding": [
+    {
+      "type": "github",
+      "url": "https://github.com/sponsors/tux-sourceish"
+    }
+  ],
+  "config": {
+    "philosophy": "Eastern wisdom meets Western precision - Raimund's vision realized"
+  }
 }
