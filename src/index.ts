@@ -10,8 +10,13 @@
 
 // Core .ud engine (pure, no dependencies)
 export { UniversalDocument } from './core/μ6_UDCore';
+export { UniversalDocumentNexus } from './core/μ6_UDNexus';
 export { UDFormat } from './core/μ3_UDFormat';
 export { μ1_UDFactory } from './core/μ1_UDFactory';
+
+// NEXUS v2.8 Binary Optimizer
+export { default as NEXUSBinaryOptimizer } from './core/μ8_BinaryOptimizer';
+export * from './core/μ8_BinaryOptimizer';
 
 // Fractal territory system (coming in v2.1)
 // export { μ5_TerritoryManager } from './fractal/μ5_TerritoryManager';

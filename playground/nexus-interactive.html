@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌌 NEXUS v2.8 Interactive Playground</title>
+    <style>
+        body {
+            font-family: 'JetBrains Mono', 'Consolas', monospace;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #ffffff;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .subtitle {
+            text-align: center;
+            opacity: 0.8;
+            margin-bottom: 30px;
+        }
+        
+        .playground-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .panel {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        
+        .panel h3 {
+            margin-top: 0;
+            color: #FFD700;
+            border-bottom: 2px solid #FFD700;
+            padding-bottom: 10px;
+        }
+        
+        .controls {
+            margin-bottom: 20px;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-family: inherit;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .output {
+            background: rgba(0,0,0,0.3);
+            border-radius: 5px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .bagua-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .bagua-item {
+            background: rgba(255,255,255,0.1);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        
+        .bagua-item:hover {
+            background: rgba(255,255,255,0.2);
+            transform: scale(1.05);
+        }
+        
+        .bagua-item.active {
+            border-color: #FFD700;
+            background: rgba(255,215,0,0.2);
+        }
+        
+        .relationship-viz {
+            background: rgba(0,0,0,0.2);
+            height: 300px;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .node {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: radial-gradient(circle, #FF6B6B, #C44569);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            border: 2px solid #fff;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .node:hover {
+            transform: scale(1.2);
+            z-index: 10;
+        }
+        
+        .connection {
+            position: absolute;
+            height: 2px;
+            background: linear-gradient(90deg, #4ECDC4, #44A08D);
+            transform-origin: left center;
+            opacity: 0.7;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border-left: 4px solid #4ECDC4;
+        }
+        
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #FFD700;
+        }
+        
+        .log-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #4ECDC4;
+            padding-left: 10px;
+        }
+        
+        .log-entry.success { border-left-color: #2ECC71; }
+        .log-entry.error { border-left-color: #E74C3C; }
+        .log-entry.warning { border-left-color: #F39C12; }
+        .log-entry.quantum { border-left-color: #9B59B6; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌌 NEXUS v2.8 Interactive Playground</h1>
+        <p class="subtitle">Quantum-Enhanced Universal Document System with Bagua Philosophy</p>
+        
+        <div class="playground-grid">
+            <!-- Control Panel -->
+            <div class="panel">
+                <h3>🎮 Control Center</h3>
+                <div class="controls">
+                    <button onclick="initializeNexus()">🌟 Initialize NEXUS</button>
+                    <button onclick="createDemoItems()">📝 Create Demo Items</button>
+                    <button onclick="analyzeRelationships()">🔗 Analyze Relationships</button>
+                    <button onclick="testTransistor()">🔌 Test Transistor</button>
+                    <button onclick="quantumInspection()">☯ Quantum Inspection</button>
+                    <button onclick="clearLog()">🧹 Clear Log</button>
+                </div>
+                
+                <h4>🧮 Bagua Query Builder</h4>
+                <div class="bagua-grid">
+                    <div class="bagua-item" data-bagua="HIMMEL" onclick="toggleBagua('HIMMEL')">
+                        ☰<br>HIMMEL<br><small>Classes</small>
+                    </div>
+                    <div class="bagua-item" data-bagua="WIND" onclick="toggleBagua('WIND')">
+                        ☴<br>WIND<br><small>Views</small>
+                    </div>
+                    <div class="bagua-item" data-bagua="WASSER" onclick="toggleBagua('WASSER')">
+                        ☵<br>WASSER<br><small>Flow</small>
+                    </div>
+                    <div class="bagua-item" data-bagua="BERG" onclick="toggleBagua('BERG')">
+                        ☶<br>BERG<br><small>Init</small>
+                    </div>
+                    <div class="bagua-item" data-bagua="SEE" onclick="toggleBagua('SEE')">
+                        ☱<br>SEE<br><small>Properties</small>
+                    </div>
+                    <div class="bagua-item" data-bagua="FEUER" onclick="toggleBagua('FEUER')">
+                        ☲<br>FEUER<br><small>Functions</small>
+                    </div>
+                    <div class="bagua-item" data-bagua="DONNER" onclick="toggleBagua('DONNER')">
+                        ☳<br>DONNER<br><small>Events</small>
+                    </div>
+                    <div class="bagua-item" data-bagua="ERDE" onclick="toggleBagua('ERDE')">
+                        ☷<br>ERDE<br><small>Data</small>
+                    </div>
+                    <div class="bagua-item" data-bagua="TAIJI" onclick="toggleBagua('TAIJI')">
+                        ☯<br>TAIJI<br><small>Unity</small>
+                    </div>
+                </div>
+                <button onclick="queryBagua()">🔍 Query Selected Bagua</button>
+            </div>
+            
+            <!-- Visualization Panel -->
+            <div class="panel">
+                <h3>🗺️ Relationship Visualization</h3>
+                <div class="relationship-viz" id="relationshipViz">
+                    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.5;">
+                        Click "Analyze Relationships" to visualize connections
+                    </div>
+                </div>
+                
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="itemCount">0</div>
+                        <div>Items</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="relationshipCount">0</div>
+                        <div>Relationships</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="compressionRatio">0.0x</div>
+                        <div>Compression</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="quantumIntegrity">1.0</div>
+                        <div>Quantum Integrity</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Log Panel -->
+        <div class="panel">
+            <h3>📜 NEXUS System Log</h3>
+            <div class="output" id="logOutput">
+                <div class="log-entry">🌌 NEXUS v2.8 Interactive Playground Ready</div>
+                <div class="log-entry">Click "Initialize NEXUS" to begin...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include the NEXUS Bridge -->
+    <script src="nexus-bridge.js"></script>
+    
+    <script>
+        // Global NEXUS state
+        let nexusDoc = null;
+        let selectedBagua = new Set();
+        let currentItems = [];
+        let currentRelationships = [];
+        
+        function log(message, type = 'info') {
+            const output = document.getElementById('logOutput');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            output.appendChild(entry);
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        function updateStats() {
+            if (!nexusDoc) return;
+            
+            document.getElementById('itemCount').textContent = nexusDoc.items.length;
+            document.getElementById('relationshipCount').textContent = nexusDoc.relationships.length;
+            
+            const avgCompression = nexusDoc.items.reduce((sum, item) => sum + (item.compression_ratio || 1), 0) / Math.max(nexusDoc.items.length, 1);
+            document.getElementById('compressionRatio').textContent = `${avgCompression.toFixed(1)}x`;
+            
+            document.getElementById('quantumIntegrity').textContent = nexusDoc.metadata.performance_stats.quantum_integrity.toFixed(1);
+        }
+        
+        function initializeNexus() {
+            nexusDoc = new NEXUSDocument();
+            log('🌟 NEXUS Document initialized with quantum signatures', 'success');
+            log(`📊 Format: ${nexusDoc.metadata.format_version}`);
+            log(`🧠 AI Capabilities: ${nexusDoc.metadata.ai_capabilities.join(', ')}`);
+            updateStats();
+        }
+        
+        function createDemoItems() {
+            if (!nexusDoc) {
+                log('❌ Please initialize NEXUS first', 'error');
+                return;
+            }
+            
+            const demoItems = [
+                { 
+                    title: 'µ1_UniversalTemplate', 
+                    type: NEXUS_CONSTANTS.ITEM_TYPES.KONSTRUKTOR, 
+                    content: { code: 'class UniversalTemplate { ... }', language: 'typescript' },
+                    position: { x: 0, y: 0, z: 0 }
+                },
+                { 
+                    title: 'µ6_AlgebraicProcessor', 
+                    type: NEXUS_CONSTANTS.ITEM_TYPES.FUNKTION, 
+                    content: { code: 'function processWithTransistor() { ... }' },
+                    position: { x: 300, y: 0, z: 0 }
+                },
+                { 
+                    title: '🧠 NEXUS AI Agent', 
+                    type: NEXUS_CONSTANTS.ITEM_TYPES.AI_AGENT, 
+                    content: { model: 'nexus-llm-v2.8', capabilities: ['relationship_analysis'] },
+                    position: { x: 600, y: 0, z: 0 }
+                },
+                { 
+                    title: '☯ Quantum State', 
+                    type: NEXUS_CONSTANTS.ITEM_TYPES.QUANTUM_STATE, 
+                    content: { superposition: true, coherence_time: 1000 },
+                    position: { x: 150, y: 300, z: 1 }
+                },
+                { 
+                    title: 'Data Repository', 
+                    type: NEXUS_CONSTANTS.ITEM_TYPES.DATABASE, 
+                    content: { schema: 'hyperdimensional', vector_support: true },
+                    position: { x: 450, y: 300, z: 1 }
+                }
+            ];
+            
+            demoItems.forEach(itemSpec => {
+                const item = nexusDoc.createItem(itemSpec);
+                log(`📝 Created: ${item.title} (compression: ${item.compression_ratio.toFixed(2)}x)`, 'success');
+            });
+            
+            log(`✅ Created ${demoItems.length} demo items with quantum signatures`, 'success');
+            updateStats();
+        }
+        
+        function analyzeRelationships() {
+            if (!nexusDoc || nexusDoc.items.length === 0) {
+                log('❌ No items to analyze. Create demo items first.', 'error');
+                return;
+            }
+            
+            const relationships = nexusDoc.analyzeAndVisualizeRelationships();
+            log(`🔗 Analyzed relationships: found ${relationships.length} connections`, 'success');
+            
+            relationships.slice(0, 5).forEach(rel => {
+                const fromItem = nexusDoc.items.find(i => i.id === rel.from);
+                const toItem = nexusDoc.items.find(i => i.id === rel.to);
+                log(`  ${fromItem.title} --[${rel.type}]--> ${toItem.title} (${rel.strength.toFixed(2)})`, 'info');
+            });
+            
+            visualizeRelationships();
+            updateStats();
+        }
+        
+        function visualizeRelationships() {
+            const viz = document.getElementById('relationshipViz');
+            viz.innerHTML = '';
+            
+            if (!nexusDoc || nexusDoc.items.length === 0) return;
+            
+            // Create nodes
+            nexusDoc.items.forEach((item, index) => {
+                const node = document.createElement('div');
+                node.className = 'node';
+                node.textContent = item.title.substring(0, 8);
+                node.title = item.title;
+                
+                // Position nodes in a circle
+                const angle = (index / nexusDoc.items.length) * 2 * Math.PI;
+                const radius = 100;
+                const centerX = 150;
+                const centerY = 150;
+                const x = centerX + radius * Math.cos(angle) - 30;
+                const y = centerY + radius * Math.sin(angle) - 30;
+                
+                node.style.left = `${x}px`;
+                node.style.top = `${y}px`;
+                
+                // Color based on item type
+                const colors = {
+                    KONSTRUKTOR: '#FF6B6B',
+                    FUNKTION: '#4ECDC4',
+                    AI_AGENT: '#9B59B6',
+                    QUANTUM_STATE: '#F39C12',
+                    DATABASE: '#2ECC71'
+                };
+                node.style.background = `radial-gradient(circle, ${colors[item.type] || '#95A5A6'}, #34495E)`;
+                
+                viz.appendChild(node);
+            });
+            
+            // Draw connections
+            nexusDoc.relationships.forEach(rel => {
+                const fromIndex = nexusDoc.items.findIndex(i => i.id === rel.from);
+                const toIndex = nexusDoc.items.findIndex(i => i.id === rel.to);
+                
+                if (fromIndex >= 0 && toIndex >= 0) {
+                    const connection = document.createElement('div');
+                    connection.className = 'connection';
+                    
+                    // Calculate positions
+                    const angle1 = (fromIndex / nexusDoc.items.length) * 2 * Math.PI;
+                    const angle2 = (toIndex / nexusDoc.items.length) * 2 * Math.PI;
+                    const radius = 100;
+                    const centerX = 150;
+                    const centerY = 150;
+                    
+                    const x1 = centerX + radius * Math.cos(angle1);
+                    const y1 = centerY + radius * Math.sin(angle1);
+                    const x2 = centerX + radius * Math.cos(angle2);
+                    const y2 = centerY + radius * Math.sin(angle2);
+                    
+                    const length = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+                    const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+                    
+                    connection.style.left = `${x1}px`;
+                    connection.style.top = `${y1}px`;
+                    connection.style.width = `${length}px`;
+                    connection.style.transform = `rotate(${angle}deg)`;
+                    connection.style.opacity = rel.strength;
+                    
+                    viz.appendChild(connection);
+                }
+            });
+        }
+        
+        function testTransistor() {
+            if (!nexusDoc || nexusDoc.items.length === 0) {
+                log('❌ No items available for transistor test', 'error');
+                return;
+            }
+            
+            // Test with transistor ON
+            const queryOn = { FEUER: true };
+            const resultsOn = nexusDoc.queryWithAlgebraicTransistor(queryOn, true);
+            log(`🔌 Transistor ON: Found ${resultsOn.length} FEUER items`, 'success');
+            
+            // Test with transistor OFF
+            const resultsOff = nexusDoc.queryWithAlgebraicTransistor(queryOn, false);
+            log(`🔌 Transistor OFF: Found ${resultsOff.length} FEUER items (algebraic: should be 0)`, 'info');
+            
+            // Quantum probabilistic test
+            for (let i = 0; i < 3; i++) {
+                const probResults = nexusDoc.queryWithAlgebraicTransistor({ HIMMEL: true }, true, true);
+                log(`🎲 Quantum Trial ${i + 1}: ${probResults.length} items (probabilistic)`, 'quantum');
+            }
+        }
+        
+        function toggleBagua(baguaName) {
+            const element = document.querySelector(`[data-bagua="${baguaName}"]`);
+            
+            if (selectedBagua.has(baguaName)) {
+                selectedBagua.delete(baguaName);
+                element.classList.remove('active');
+            } else {
+                selectedBagua.add(baguaName);
+                element.classList.add('active');
+            }
+            
+            log(`🧮 Toggled ${baguaName} (${selectedBagua.size} selected)`, 'info');
+        }
+        
+        function queryBagua() {
+            if (!nexusDoc) {
+                log('❌ Please initialize NEXUS first', 'error');
+                return;
+            }
+            
+            if (selectedBagua.size === 0) {
+                log('⚠️ No Bagua aspects selected', 'warning');
+                return;
+            }
+            
+            const query = {};
+            selectedBagua.forEach(bagua => {
+                query[bagua] = true;
+            });
+            
+            const results = nexusDoc.queryWithAlgebraicTransistor(query, true);
+            log(`🔍 Bagua Query: ${Array.from(selectedBagua).join('+')} → ${results.length} items`, 'success');
+            
+            results.forEach(item => {
+                const typeNames = Object.keys(NEXUS_CONSTANTS.ITEM_TYPES).find(key => 
+                    NEXUS_CONSTANTS.ITEM_TYPES[key] === item.type
+                );
+                log(`  - ${item.title} (${typeNames})`, 'info');
+            });
+        }
+        
+        function quantumInspection() {
+            if (!nexusDoc) {
+                log('❌ Please initialize NEXUS first', 'error');
+                return;
+            }
+            
+            const quantumState = nexusDoc.inspectQuantumState();
+            
+            log('☯ NEXUS QUANTUM STATE INSPECTION', 'quantum');
+            log('==================================', 'quantum');
+            log(`Format: ${quantumState.format}`, 'quantum');
+            log(`Items: ${quantumState.items}`, 'quantum');
+            log(`Relationships: ${quantumState.relationships}`, 'quantum');
+            log(`Compression Efficiency: ${quantumState.compression_efficiency}`, 'quantum');
+            log(`Relationship Density: ${quantumState.relationship_density}`, 'quantum');
+            log(`Quantum Integrity: ${quantumState.quantum_integrity}`, 'quantum');
+            log(`Performance Score: ${quantumState.performance_score.toFixed(3)}`, 'quantum');
+            
+            log('Bagua Distribution:', 'quantum');
+            Object.entries(quantumState.bagua_distribution).forEach(([bagua, count]) => {
+                log(`  ${bagua}: ${count}`, 'quantum');
+            });
+            
+            log(`AI Capabilities: ${quantumState.ai_capabilities.join(', ')}`, 'quantum');
+        }
+        
+        function clearLog() {
+            document.getElementById('logOutput').innerHTML = '';
+            log('🧹 Log cleared', 'info');
+        }
+        
+        // Initialize the playground
+        log('🌌 NEXUS v2.8 Interactive Playground Loaded', 'success');
+        log('Raimunds Algebraische Philosophie + Kiras Vision = NEXUS', 'quantum');
+    </script>
+</body>
+</html>

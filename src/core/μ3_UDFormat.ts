@@ -10,19 +10,19 @@
 export class UDFormat {
   
   /**
-   * Raimund's Bagua Constants - Früher Himmel Anordnung
-   * Each trigram represents a fundamental aspect of reality
+   * Raimund's Extended Bagua Constants - NEXUS v2.8 Früher Himmel Anordnung
+   * Each trigram represents a fundamental aspect of reality with quantum resonance
    */
   static readonly BAGUA = {
-    HIMMEL: 1,   // ☰ (1) - Heaven/Sky - Templates, Creation
-    WIND: 2,     // ☴ (2) - Wind/Gentle - UI, Views, Interfaces  
-    WASSER: 4,   // ☵ (4) - Water/Flow - Procedures, Navigation
-    BERG: 8,     // ☶ (8) - Mountain/Stillness - Init, Foundation
-    SEE: 16,     // ☱ (16) - Lake/Joy - Properties, Attributes
-    FEUER: 32,   // ☲ (32) - Fire/Clinging - Functions, Processing
-    DONNER: 64,  // ☳ (64) - Thunder/Arousing - Events, Reactions
-    ERDE: 128,   // ☷ (128) - Earth/Receptive - Data, Storage
-    TAIJI: 256   // ☯ (256) - Unity/Center - Holistic Integration
+    HIMMEL: 0b000000001,  // µ1 - Classes/Templates (☰)
+    WIND:   0b000000010,  // µ2 - Views/UI (☴)  
+    WASSER: 0b000000100,  // µ3 - Procedures/Flow (☵)
+    BERG:   0b000001000,  // µ4 - Init/Setup (☶)
+    SEE:    0b000010000,  // µ5 - Properties (☱)
+    FEUER:  0b000100000,  // µ6 - Functions (☲)
+    DONNER: 0b001000000,  // µ7 - Events (☳)
+    ERDE:   0b010000000,  // µ8 - Global/Base (☷)
+    TAIJI:  0b100000000   // µ9 - Center/Unity (☯)
   } as const;
 
   /**
@@ -71,7 +71,7 @@ export class UDFormat {
   } as const;
 
   /**
-   * Raimund's Algebraic Transistor Function
+   * Raimund's Algebraic Transistor Function (NEXUS Enhanced)
    * 
    * Converts boolean logic to mathematical expressions using the principle:
    * - 0^0 = 1 (TRUE condition)
@@ -88,6 +88,18 @@ export class UDFormat {
    */
   static transistor(condition: boolean): number {
     return Math.pow(0, condition ? 0 : 1);
+  }
+
+  /**
+   * Quantum Transistor - NEXUS v2.8 Feature
+   * Probabilistic transistor with quantum uncertainty
+   * 
+   * @param probability - Probability threshold (0.0 - 1.0)
+   * @returns 1 or 0 based on quantum randomness
+   */
+  static quantumTransistor(probability: number): number {
+    const random = Math.random();
+    return UDFormat.transistor(random < probability);
   }
 
   /**
@@ -213,33 +225,62 @@ export class UDFormat {
   }
 
   /**
-   * Find polar opposite in Bagua system
-   * Based on I Ching trigram complementarity
+   * NEXUS v2.8: Enhanced Polar Pairs with Resonance Factors
+   * Polare Beziehungen des Frühen Himmels mit Quantums-Resonanz
+   */
+  static readonly POLAR_PAIRS = new Map([
+    [UDFormat.BAGUA.HIMMEL, { opposite: UDFormat.BAGUA.ERDE, resonance: 0.9 }],   // HIMMEL ↔ ERDE
+    [UDFormat.BAGUA.WIND,   { opposite: UDFormat.BAGUA.DONNER, resonance: 0.8 }], // WIND ↔ DONNER  
+    [UDFormat.BAGUA.WASSER, { opposite: UDFormat.BAGUA.FEUER, resonance: 0.85 }], // WASSER ↔ FEUER
+    [UDFormat.BAGUA.BERG,   { opposite: UDFormat.BAGUA.SEE, resonance: 0.75 }],   // BERG ↔ SEE
+    [UDFormat.BAGUA.ERDE,   { opposite: UDFormat.BAGUA.HIMMEL, resonance: 0.9 }], // ERDE ↔ HIMMEL
+    [UDFormat.BAGUA.DONNER, { opposite: UDFormat.BAGUA.WIND, resonance: 0.8 }],   // DONNER ↔ WIND
+    [UDFormat.BAGUA.FEUER,  { opposite: UDFormat.BAGUA.WASSER, resonance: 0.85 }],// FEUER ↔ WASSER
+    [UDFormat.BAGUA.SEE,    { opposite: UDFormat.BAGUA.BERG, resonance: 0.75 }],  // SEE ↔ BERG
+    [UDFormat.BAGUA.TAIJI,  { opposite: UDFormat.BAGUA.TAIJI, resonance: 1.0 }]   // TAIJI self-resonance
+  ]);
+
+  /**
+   * Find polar opposite in Bagua system with resonance
+   * Based on I Ching trigram complementarity (NEXUS Enhanced)
    * 
    * @param baguaDescriptor - The bagua number to find opposite for
    * @returns Polar opposite bagua descriptor
    */
   static findPolarOpposite(baguaDescriptor: number): number {
-    const polarMap = {
-      [UDFormat.BAGUA.HIMMEL]: UDFormat.BAGUA.ERDE,   // Heaven ↔ Earth
-      [UDFormat.BAGUA.WIND]: UDFormat.BAGUA.BERG,     // Wind ↔ Mountain
-      [UDFormat.BAGUA.WASSER]: UDFormat.BAGUA.FEUER,  // Water ↔ Fire
-      [UDFormat.BAGUA.SEE]: UDFormat.BAGUA.DONNER,    // Lake ↔ Thunder
-      [UDFormat.BAGUA.ERDE]: UDFormat.BAGUA.HIMMEL,
-      [UDFormat.BAGUA.BERG]: UDFormat.BAGUA.WIND,
-      [UDFormat.BAGUA.FEUER]: UDFormat.BAGUA.WASSER,
-      [UDFormat.BAGUA.DONNER]: UDFormat.BAGUA.SEE,
-      [UDFormat.BAGUA.TAIJI]: UDFormat.BAGUA.TAIJI    // Unity is self-opposite
-    };
-
     let oppositeDescriptor = 0;
-    Object.entries(polarMap).forEach(([original, opposite]) => {
-      if ((baguaDescriptor & Number(original)) === Number(original)) {
+    
+    for (const [original, { opposite }] of UDFormat.POLAR_PAIRS) {
+      if ((baguaDescriptor & original) === original) {
         oppositeDescriptor |= opposite;
       }
-    });
+    }
 
     return oppositeDescriptor;
+  }
+
+  /**
+   * Calculate Bagua Resonance between two descriptors (NEXUS v2.8)
+   * 
+   * @param bagua1 - First bagua descriptor
+   * @param bagua2 - Second bagua descriptor  
+   * @returns Resonance factor (0.0 - 1.0)
+   */
+  static calculateBaguaResonance(bagua1: number, bagua2: number): number {
+    let commonBits = 0;
+    let totalBits = 0;
+    
+    for (let i = 0; i < 9; i++) {
+      const bit = 1 << i;
+      if ((bagua1 & bit) || (bagua2 & bit)) {
+        totalBits++;
+        if ((bagua1 & bit) && (bagua2 & bit)) {
+          commonBits++;
+        }
+      }
+    }
+    
+    return totalBits > 0 ? commonBits / totalBits : 0;
   }
 
   /**

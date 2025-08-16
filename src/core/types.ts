@@ -46,28 +46,43 @@ export interface UDOrigin {
   path: string;
   /** Tool or application that created this */
   tool: string;
+  /** Device identifier */
+  device?: string;
+  /** Quantum signature for authenticity */
+  quantum_signature?: string;
 }
 
 /**
- * Transformation history entry with German verbs
+ * Transformation verbs with authentic German philosophy
+ */
+export type TransformationVerb = 'erschaffen' | 'kristallisiert' | 'sublimiert' | 'destilliert' | 'iteriert' | 'fusioniert' | 'entfernt';
+
+/**
+ * Transformation history entry with German verbs and quantum tracking
  */
 export interface UDTransformation {
+  /** Unique transformation ID */
+  readonly id: UDID;
+  /** Unix timestamp in milliseconds */
+  timestamp: number;
   /** German transformation verb */
-  verb: 'erschaffen' | 'crystallized' | 'enhanced' | 'iterated' | 'updated' | 'moved' | 'deleted';
+  verb: TransformationVerb;
   /** Who or what performed the transformation */
   agent: string;
-  /** ISO timestamp */
-  timestamp: string;
   /** Description of what changed */
   description: string;
+  /** Reference to previous state */
+  previous_state_ref?: UDID;
+  /** Quantum hash for immutability proof */
+  quantum_hash?: string;
 }
 
 /**
- * Complete item in UniversalDocument with spatial awareness
+ * Complete item in UniversalDocument with spatial awareness and NEXUS extensions
  */
 export interface UDItem {
   /** Unique identifier */
-  id: UDID;
+  readonly id: UDID;
   /** Raimund's enhanced item types */
   type: ItemType;
   /** Human-readable title */
@@ -83,33 +98,43 @@ export interface UDItem {
   /** Bagua descriptor for philosophical classification */
   bagua_descriptor: number;
   /** Origin tracking for provenance */
-  origin: UDOrigin;
+  origin?: UDOrigin;
   /** Complete transformation history */
-  history: UDTransformation[];
-  /** Additional metadata */
-  metadata?: Record<string, any>;
-  /** Timestamp of creation */
-  created_at: string;
-  /** Timestamp of last modification */
-  updated_at: string;
+  transformation_history: UDTransformation[];
+  /** Unix timestamp of creation in milliseconds */
+  readonly created_at: number;
+  /** Unix timestamp of last modification in milliseconds */
+  updated_at: number;
+  
+  // NEXUS Extensions
+  /** Vector embedding for semantic search */
+  vector_embedding?: Float32Array;
+  /** Relationship strengths to other items */
+  relationship_strength?: Map<UDID, number>;
+  /** Compression ratio for content */
+  compression_ratio?: number;
+  /** Access frequency for performance metrics */
+  access_frequency?: number;
 }
 
 /**
- * Raimund's authentic German item type system (0-10)
+ * Raimund's authentic German item type system (0-12)
  * Preserving the original German philosophy with English aliases
  */
 export enum ItemType {
-  VORTEX = 0,        // ☯ Unknown/Origin
-  KONSTRUKTOR = 1,   // ☰ Code/Templates  
-  TABELLE = 2,       // ☴ Tables/Views
-  FLUSS = 3,         // ☵ Media/Streams
-  INIT = 4,          // ☶ Configuration
-  EIGENSCHAFT = 5,   // ☱ Properties
-  FUNKTION = 6,      // ☲ Functions
-  EREIGNIS = 7,      // ☳ Events/Triggers
+  VORTEX = 0,        // ☯ Unknown/Origin (TAIJI)
+  KONSTRUKTOR = 1,   // ☰ Code/Templates (HIMMEL)  
+  TABELLE = 2,       // ☴ Tables/Views (WIND)
+  FLUSS = 3,         // ☵ Media/Streams (WASSER)
+  INIT = 4,          // ☶ Configuration (BERG)
+  EIGENSCHAFT = 5,   // ☱ Properties (SEE)
+  FUNKTION = 6,      // ☲ Functions (FEUER)
+  EREIGNIS = 7,      // ☳ Events/Triggers (DONNER)
   NOTIZZETTEL = 8,   // ☷ Notes/Documents (Original German!)
-  DATABASE = 9,      // Extended: Hyperdimensional
+  DATABASE = 9,      // Extended: Hyperdimensional Vector DB
   SYSTEM = 10,       // Extended: System-level
+  AI_AGENT = 11,     // NEXUS: AI Agents
+  QUANTUM_STATE = 12,// NEXUS: Quantum State
   
   // English aliases for compatibility
   VARIABLE = 8,      // Alias for NOTIZZETTEL
@@ -131,7 +156,11 @@ export const GERMAN_TYPE_NAMES = {
   [ItemType.EREIGNIS]: 'EREIGNIS',
   [ItemType.NOTIZZETTEL]: 'NOTIZZETTEL',
   [ItemType.DATABASE]: 'DATABASE',
-  [ItemType.SYSTEM]: 'SYSTEM'
+  [ItemType.SYSTEM]: 'SYSTEM',
+  [ItemType.AI_AGENT]: 'AI_AGENT',
+  [ItemType.QUANTUM_STATE]: 'QUANTUM_STATE'
+  // Note: VARIABLE, NOTE, DOCUMENT are aliases for NOTIZZETTEL (value 8)
+  // They will automatically resolve to 'NOTIZZETTEL' when looked up
 } as const;
 
 /**
@@ -207,7 +236,7 @@ export interface UDEmbeddedFont {
 }
 
 /**
- * UniversalDocument metadata (Enhanced LOKI + tux-sourceish structure)
+ * UniversalDocument metadata (Enhanced NEXUS v2.8 structure)
  */
 export interface UDMetadata {
   /** Format version */
@@ -222,6 +251,21 @@ export interface UDMetadata {
   item_count: number;
   /** Embedded font for true portability */
   embedded_font?: UDEmbeddedFont;
+  
+  // NEXUS Features
+  /** Presets for TUI formats and Bagua themes */
+  presets?: {
+    tui_formats: Record<string, { width: number, height: number, codepage?: number }>;
+    bagua_themes: Record<string, Record<string, string>>;
+  };
+  /** Performance statistics */
+  performance_stats?: {
+    compression_efficiency: number;
+    relationship_density: number;
+    quantum_integrity: number;
+  };
+  /** AI capabilities available */
+  ai_capabilities?: string[];
   /** Additional settings */
   settings?: Record<string, any>;
   /** Bagua configuration */
@@ -230,6 +274,50 @@ export interface UDMetadata {
     precedence_order: number[];
     symbolic_encoding: boolean;
   };
+}
+
+/**
+ * Bagua flag type for type-safe Bagua operations
+ */
+export type BaguaFlag = 'HIMMEL' | 'WIND' | 'WASSER' | 'BERG' | 'SEE' | 'FEUER' | 'DONNER' | 'ERDE' | 'TAIJI';
+
+/**
+ * Relationship between items for LLM visualization (NEXUS)
+ */
+export interface UDRelationship {
+  /** Source item ID */
+  from: UDID;
+  /** Target item ID */
+  to: UDID;
+  /** Type of relationship */
+  type: 'derived' | 'references' | 'contains' | 'bagua_resonance' | 'semantic_similarity' | 'temporal_sequence';
+  /** Relationship strength (0.0 - 1.0) */
+  strength: number;
+  /** Additional metadata */
+  metadata: {
+    description: string;
+    confidence: number;
+    bagua_affinity?: number;
+    semantic_distance?: number;
+  };
+}
+
+/**
+ * Compressed content block for efficient storage (NEXUS)
+ */
+export interface UDContentBlock {
+  /** Magic number for block identification */
+  magic: number;
+  /** Compression algorithm used */
+  compression: 'lz4' | 'gzip' | 'raw';
+  /** Content encoding */
+  encoding: 'utf8' | 'binary' | 'base64';
+  /** Original content size */
+  original_size: number;
+  /** Compressed data */
+  compressed_data: Uint8Array;
+  /** Checksum for integrity */
+  checksum: number;
 }
 
 /**
